@@ -1,0 +1,59 @@
+{
+  "name": "boosty-api",
+  "version": "0.1.0",
+  "description": "Unofficial TypeScript client for the internal Boosty (boosty.to) API. Full endpoint coverage, works on Bun and Node.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "keywords": [
+    "boosty",
+    "boosty-api",
+    "typescript",
+    "bun",
+    "api-client",
+    "internal-api"
+  ],
+  "license": "MIT",
+  "author": "beekamai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/beekamai/boosty-api.git"
+  },
+  "homepage": "https://github.com/beekamai/boosty-api#readme",
+  "bugs": {
+    "url": "https://github.com/beekamai/boosty-api/issues"
+  },
+  "scripts": {
+    "dev": "bun run examples/demo.ts",
+    "login": "bun run examples/login.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "tsup",
+    "prepublishOnly": "bun run build"
+  },
+  "optionalDependencies": {
+    "puppeteer": "^23.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=18",
+    "bun": ">=1.1.0"
+  }
+}

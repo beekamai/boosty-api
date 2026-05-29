@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM"],
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "allowImportingTsExtensions": true,
+
+    // ВАЖНО: модели наследуют BaseObject, который копирует поля ответа в конструкторе.
+    // С define-семантикой (по умолчанию при target ESNext) объявления полей вида
+    // `id?: string` выполнялись бы как `this.id = undefined` ПОСЛЕ super(), затирая
+    // скопированные значения. Отключаем, чтобы объявления полей не генерировали код.
+    "useDefineForClassFields": false,
+    "verbatimModuleSyntax": false,
+    "noEmit": true,
+
+    "types": ["@types/bun"],
+
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src/**/*.ts", "examples/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

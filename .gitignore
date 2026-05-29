@@ -1,0 +1,22 @@
+# Secrets — do NOT commit access tokens
+auth.json
+
+# Dependencies
+node_modules/
+bun.lock
+bun.lockb
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Logs / temp
+*.log
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# Serena (local assistant cache)
+.serena/
