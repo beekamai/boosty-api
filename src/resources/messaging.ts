@@ -1,7 +1,7 @@
 /* resources/messaging.ts — dialogs, messages, notifications. */
 /* The whole module is @experimental: paths reconstructed from the web client, need verification on traffic. */
 import { BaseResource } from "../http";
-import { DialogsResponse, MessagesResponse } from "../types/messaging";
+import { Dialog, DialogsResponse, DialogWithUser, MessagesResponse } from "../types/messaging";
 import { NotificationsResponse } from "../types/notification";
 
 export class MessagingResource extends BaseResource {
@@ -14,6 +14,27 @@ export class MessagingResource extends BaseResource {
             params: { limit: options.limit, offset: options.offset },
         });
         return new DialogsResponse(json);
+    }
+
+    /**
+     * Probe a conversation with a user: does it already exist, and are we allowed to write first?
+     * Check `relation.canWrite` before creating anything — closed DMs and blacklists are common.
+     * @verified GET /v1/dialog?user_id=<id> — note: NO trailing slash, and it answers 201, not 200.
+     */
+    async dialogWithUser(userId: number | string): Promise<DialogWithUser> {
+        const json = await this.core.request("GET", `/v1/dialog`, { params: { user_id: userId } });
+        return new DialogWithUser(json);
+    }
+
+    /**
+     * Create a conversation with a user, so that the blogger can write first.
+     * Boosty does not open conversations on subscription — without this call there is no dialog id
+     * to send a message to. Returns the created dialog.
+     * @verified POST /v1/dialog/ (WITH trailing slash), form `user_id=<id>` → 201 with the dialog.
+     */
+    async createDialog(userId: number | string): Promise<Dialog> {
+        const json = await this.core.request("POST", `/v1/dialog/`, { form: { user_id: userId } });
+        return new Dialog(json);
     }
 
     /**

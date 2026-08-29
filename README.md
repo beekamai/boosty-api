@@ -89,7 +89,7 @@ A **non-empty `device_id` is required** for token refresh.
 | `media` | `list` (media_album, `type`+`limit_by=media`) | ✅ |
 | `social` | `likePost` `unlikePost` `voteOption` `removeVote` | 🟡 |
 | `feed` | `posts` `searchBlogs` | ✅ |
-| `messaging` | `dialogs` `messages` `sendMessage` `notifications` | ✅ / ❔ notifications |
+| `messaging` | `dialogs` `dialogWithUser` `createDialog` `messages` `sendMessage` `notifications` | ✅ / ❔ notifications |
 | `income` | `sales` (POST form; may be "Category disabled" per account) | ⚠️ |
 
 Legacy aliases `api.getPost`, `api.getPostComments`, `api.request` are kept for compatibility.
@@ -114,6 +114,18 @@ import { API, buildMessage } from "boosty-api";
 
 const blocks = buildMessage(["Hi! Here is your link:", { link: "https://example.com/sub" }]);
 await api.messaging.sendMessage(dialogId, blocks);
+```
+
+**Write to a subscriber first** — Boosty does not open a conversation when someone subscribes, so
+there is no dialog to post into. Probe the relation, create the dialog, then send. Always check
+`canWrite`: a subscriber may have DMs closed or donation-gated, and posting is refused.
+
+```ts
+const probe = await api.messaging.dialogWithUser(userId);
+if (!probe.relation?.canWrite) throw new Error("this user cannot be messaged first");
+
+const dialogId = probe.id ?? (await api.messaging.createDialog(userId)).id;
+await api.messaging.sendMessage(dialogId, buildMessage(["Here is your link:", { link: url }]));
 ```
 
 **Handle errors** — failed requests throw `BoostyError` with status code and body:
@@ -244,7 +256,7 @@ cookie `_clientId` — это device id. `auth.json` использует **snak
 | `media` | `list` (media_album, `type`+`limit_by=media`) | ✅ |
 | `social` | `likePost` `unlikePost` `voteOption` `removeVote` | 🟡 |
 | `feed` | `posts` `searchBlogs` | ✅ |
-| `messaging` | `dialogs` `messages` `sendMessage` `notifications` | ✅ / ❔ notifications |
+| `messaging` | `dialogs` `dialogWithUser` `createDialog` `messages` `sendMessage` `notifications` | ✅ / ❔ notifications |
 | `income` | `sales` (POST form; может быть «Category disabled» у аккаунта) | ⚠️ |
 
 Легаси-алиасы `api.getPost`, `api.getPostComments`, `api.request` сохранены для совместимости.

@@ -13,6 +13,26 @@ export class Chatmate extends BaseUser {
     declare acceptedCurrencies?: string[];
 }
 
+/**
+ * Permissions for a conversation with a user. `canWrite` is the one that matters before writing
+ * first: not every subscriber can be messaged (closed DMs, blacklist, donation-gated inbox).
+ */
+export class DialogRelation extends BaseObject {
+    /** Relation kind, e.g. "subscriber". */
+    declare type?: string;
+    /** We are allowed to write to them. */
+    declare canWrite?: boolean;
+    /** They are allowed to write to us. */
+    declare canWriteMe?: boolean;
+    /** Writing requires a donation first. */
+    declare needDonation?: boolean;
+    declare isBlackListed?: boolean;
+    declare isChatmateBlackListed?: boolean;
+    declare chatmateRequiresVerificationForPayments?: boolean;
+    /** When the relation started (subscription time for subscribers). */
+    declare startAt?: number;
+}
+
 /** Donation attached to a message in a conversation. */
 export class DonationInfo extends BaseObject {
     declare amount: number;
@@ -66,11 +86,39 @@ export class Dialog extends BaseObject {
     declare unreadMsgCount?: number;
     declare unreadCount?: number;
     declare isBlocked?: boolean;
+    declare createdAt?: number;
+    /** Permissions for this conversation. */
+    declare relation?: DialogRelation;
+    /** Centrifugo channel for live updates. */
+    declare wsChannel?: string;
+    declare signedQuery?: string;
 
     constructor(data: Record<string, any> = {}) {
         super(data);
         if (data.chatmate) this.chatmate = new Chatmate(data.chatmate);
         if (data.lastMessage) this.lastMessage = new Message(data.lastMessage);
+        if (data.relation) this.relation = new DialogRelation(data.relation);
+    }
+}
+
+/**
+ * Result of probing a conversation with a user (`GET /v1/dialog?user_id=…`).
+ * `id` is present only when the conversation already exists — otherwise it has to be created first.
+ */
+export class DialogWithUser extends BaseObject {
+    declare id?: number;
+    declare relation?: DialogRelation;
+    declare chatmate?: Chatmate;
+    /** Recent messages — returned only for an existing conversation. */
+    declare messages?: Message[];
+    declare unreadMsgCount?: number;
+    declare createdAt?: number;
+
+    constructor(data: Record<string, any> = {}) {
+        super(data);
+        if (data.chatmate) this.chatmate = new Chatmate(data.chatmate);
+        if (data.relation) this.relation = new DialogRelation(data.relation);
+        if (Array.isArray(data.messages)) this.messages = data.messages.map((m: any) => new Message(m));
     }
 }
 

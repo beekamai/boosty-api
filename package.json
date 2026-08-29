@@ -1,6 +1,6 @@
 {
   "name": "boosty-api",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Unofficial TypeScript client for the internal Boosty (boosty.to) API. Full endpoint coverage, works on Bun and Node.",
   "type": "module",
   "main": "./dist/index.cjs",
