@@ -42,7 +42,6 @@
     "login": "bun run examples/login.ts",
     "typecheck": "tsc --noEmit",
     "build": "tsup",
-    "prepare": "bunx --bun tsup",
     "prepublishOnly": "bun run build"
   },
   "optionalDependencies": {
