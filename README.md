@@ -86,7 +86,7 @@ A **non-empty `device_id` is required** for token refresh.
 | `comments` | `list` `replies` `create` `like` `unlike` | ✅ list / 🟡 rest |
 | `blog` | `profile` `subscribers` `subscriptionLevels` `blacklist` | ✅ |
 | `user` | `current` | ✅ |
-| `media` | `list` (media_album, `type`+`limit_by=media`) | ✅ |
+| `media` | `list` (media_album; `type`: `all` `image` `video` `audio`) | ✅ |
 | `social` | `likePost` `unlikePost` `voteOption` `removeVote` | 🟡 |
 | `feed` | `posts` `searchBlogs` | ✅ |
 | `messaging` | `dialogs` `dialogWithUser` `createDialog` `messages` `sendMessage` `notifications` | ✅ / ❔ notifications |
@@ -253,7 +253,7 @@ cookie `_clientId` — это device id. `auth.json` использует **snak
 | `comments` | `list` `replies` `create` `like` `unlike` | ✅ list / 🟡 остальное |
 | `blog` | `profile` `subscribers` `subscriptionLevels` `blacklist` | ✅ |
 | `user` | `current` | ✅ |
-| `media` | `list` (media_album, `type`+`limit_by=media`) | ✅ |
+| `media` | `list` (media_album; `type`: `all` `image` `video` `audio`) | ✅ |
 | `social` | `likePost` `unlikePost` `voteOption` `removeVote` | 🟡 |
 | `feed` | `posts` `searchBlogs` | ✅ |
 | `messaging` | `dialogs` `dialogWithUser` `createDialog` `messages` `sendMessage` `notifications` | ✅ / ❔ notifications |
