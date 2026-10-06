@@ -1,4 +1,4 @@
-import { Content, Text, Link } from "../types/content";
+import { Content, type ListItem } from "../types/content";
 
 export interface Entity {
     type: string;
@@ -34,24 +34,42 @@ export function renderText(
         return [text, entities];
     }
 
-    for (const content of postData) {
-        if (fixLongNewlines) while (text.endsWith("\n\n\n\n")) text = text.slice(0, -1);
-        if (content.type === "text") {
-            const textContent = content as Text;
-            const rawText = parseContentText(textContent.content);
-            if (!rawText) continue;
-            text += rawText;
-        } else if (content.type === "link") {
-            const linkContent = content as Link;
-            const rawText = parseContentText(linkContent.content);
-            if (!rawText) continue;
-            text += rawText;
+    /** Appends a text, header or link block; a header gets a line of its own. Returns false for any other block type. */
+    const appendInline = (content: Content): boolean => {
+        if (content.type !== "text" && content.type !== "header" && content.type !== "link") return false;
+        const rawText = parseContentText(content.content);
+        if (!rawText) return true;
+        const isHeader = content.type === "header";
+        if (isHeader && text && !text.endsWith("\n")) text += "\n";
+        text += rawText;
+        if (isHeader) text += "\n";
+        if (content.type === "link") {
             entities.push({
                 type: "text_link",
-                url: linkContent.url,
+                url: content.url,
                 offset: text.length - rawText.length,
                 length: rawText.length,
             });
+        }
+        return true;
+    };
+
+    /** Appends list items one per line ("- " or "1. "), nested items indented by two spaces. */
+    const appendList = (items: ListItem[], style: string, depth: number): void => {
+        items.forEach((item, index) => {
+            if (text && !text.endsWith("\n")) text += "\n";
+            text += "  ".repeat(depth) + (style === "ordered" ? `${index + 1}. ` : "- ");
+            item.data.forEach(appendInline);
+            appendList(item.items, style, depth + 1);
+        });
+    };
+
+    for (const content of postData) {
+        if (fixLongNewlines) while (text.endsWith("\n\n\n\n")) text = text.slice(0, -1);
+        if (appendInline(content)) continue;
+        if (content.type === "list") {
+            appendList(content.items ?? [], content.style, 0);
+            text += "\n";
         } else if (text) {
             text = text.trim() + placeholder;
         }
