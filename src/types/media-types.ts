@@ -73,7 +73,7 @@ export class Audio extends BaseObject {
     declare album?: string;
     declare artist?: string;
     declare track?: string;
-    declare uploadStatus?: string;
+    declare uploadStatus?: string | null;
     declare isMigrated?: boolean;
     declare fileType?: "MP3" | "WAV";
     declare timeCode?: number;
@@ -89,6 +89,7 @@ export class Image extends BaseObject {
     declare width: number;
     declare height: number;
     declare size: number;
+    declare title?: string;
 }
 
 export class Video extends BaseObject {
@@ -96,15 +97,15 @@ export class Video extends BaseObject {
     declare id: string;
     declare url: string;
     declare complete: boolean;
-    declare title: string;
+    declare title?: string;
     declare duration: number;
     declare width: number;
     declare height: number;
     declare playerUrls: PlayerUrl[];
-    declare defaultPreview: string;
-    declare preview: string;
+    declare defaultPreview?: string;
+    declare preview?: string;
     declare previewId?: string;
-    declare vid: number;
+    declare vid: string;
     declare failoverHost: string;
     declare timeCode?: number;
     declare viewsCounter?: number;

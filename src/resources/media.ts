@@ -2,14 +2,17 @@
 import { BaseResource } from "../http";
 import { MediaPostsResponse } from "../types/media";
 
-/** Media type. Verified on the live API: image and all are accepted; limit_by is required. */
-export type MediaType = "image" | "all" | "ok_video" | "audio_file";
+/**
+ * Media type filter. Verified on the live API: all | image | video | audio are accepted,
+ * the content type names (ok_video, audio_file) respond 400 invalid_param. limit_by is required.
+ */
+export type MediaType = "all" | "image" | "video" | "audio";
 
 export class MediaResource extends BaseResource {
     /**
      * Blog media feed (media aggregated from posts).
      * @verified GET /v1/blog/{blog}/media_album/?type=...&limit_by=media
-     *   Empirically: the `type` (image|all) and `limit_by=media` parameters are required,
+     *   Empirically: the `type` (all|image|video|audio) and `limit_by=media` parameters are required,
      *   otherwise the API responds 400 invalid_param. The media_post/media_posts paths do not exist (404).
      */
     async list(

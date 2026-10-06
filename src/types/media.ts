@@ -1,4 +1,6 @@
 import { BaseObject } from "./base";
+import type { Audio, Image, Video } from "./media-types";
+import type { TeaserContent } from "./teaser";
 
 /** Blog media album (GET /v1/blog/{blog}/media_album/). */
 export class MediaAlbum extends BaseObject {
@@ -19,15 +21,33 @@ export class MediaAlbumsResponse extends BaseObject {
     }
 }
 
-/** A post of the media feed together with its media (image | ok_video | audio_file etc.). */
+/** A media item of the feed. The discriminator is the `type` field: image | ok_video | audio_file. */
+export type MediaItem = Image | Video | Audio;
+
+/** Short description of the post the media belongs to. */
+export interface MediaPostInfo {
+    id: string;
+    title: string;
+    hasAccess: boolean;
+    price: number;
+    /** Unix time, seconds. */
+    publishTime: number;
+    /** Empty when there is no access. */
+    signedQuery: string;
+    teaser: TeaserContent[];
+    subscriptionLevelId?: number;
+    [key: string]: any;
+}
+
+/** A post of the media feed together with its media. */
 export class MediaPost extends BaseObject {
-    declare post: { id: string; title?: string; hasAccess?: boolean; publishTime?: number; [key: string]: any };
-    declare media: Record<string, any>[];
+    declare post: MediaPostInfo;
+    declare media: MediaItem[];
 }
 
 export class MediaPostsResponse extends BaseObject {
     declare data: MediaPost[];
-    declare extra?: { isLast?: boolean; offset?: string };
+    declare extra: { isLast: boolean; offset: string };
 
     constructor(data: Record<string, any> = {}) {
         super(data);
