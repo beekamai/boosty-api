@@ -19,12 +19,10 @@ export class MediaAlbumsResponse extends BaseObject {
     }
 }
 
-/** A single item of the media feed (image | ok_video | audio_file etc.). */
+/** A post of the media feed together with its media (image | ok_video | audio_file etc.). */
 export class MediaPost extends BaseObject {
-    declare type: string;
-    declare id: string;
-    declare postId?: string;
-    declare createdAt?: string;
+    declare post: { id: string; title?: string; hasAccess?: boolean; publishTime?: number; [key: string]: any };
+    declare media: Record<string, any>[];
 }
 
 export class MediaPostsResponse extends BaseObject {
@@ -33,6 +31,7 @@ export class MediaPostsResponse extends BaseObject {
 
     constructor(data: Record<string, any> = {}) {
         super(data);
-        this.data = (data.data ?? []).map((m: any) => new MediaPost(m));
+        // The API wraps the list: { data: { mediaPosts: [...] }, extra }
+        this.data = (data.data?.mediaPosts ?? []).map((m: any) => new MediaPost(m));
     }
 }
