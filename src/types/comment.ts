@@ -1,22 +1,25 @@
 import { BaseObject } from "./base";
 import { Commentator } from "./users";
-import { Reactions, Reacted } from "./reactions";
+import { Reactions, Reacted, ReactionCounter } from "./reactions";
+import type { ContentItem } from "./content";
 
 /** Reply to a comment. */
 export class Reply extends BaseObject {
     declare id: string;
     declare intId?: number;
-    declare createdAt?: string;
-    declare updatedAt?: string;
+    /** Unix time, seconds. */
+    declare createdAt?: number;
+    declare updatedAt?: number;
     declare isUpdated?: boolean;
     declare isBlocked?: boolean;
     declare isDeleted?: boolean;
     declare author?: Commentator;
     declare reactions?: Reactions;
+    declare reactionCounters?: ReactionCounter[];
     declare reacted?: Reacted;
     declare replyCount?: number;
     declare post?: { id: string };
-    declare data?: any[];
+    declare data?: ContentItem[];
     declare replyToUser?: Commentator;
     declare replyId?: number;
     declare parentId?: number;
@@ -42,18 +45,20 @@ export class RepliesResponse extends BaseObject {
 export class Comment extends BaseObject {
     declare id: string;
     declare intId?: number;
-    declare createdAt?: string;
-    declare updatedAt?: string;
+    /** Unix time, seconds. */
+    declare createdAt?: number;
+    declare updatedAt?: number;
     declare isUpdated?: boolean;
     declare isBlocked?: boolean;
     declare isDeleted?: boolean;
     declare author?: Commentator;
     declare reactions?: Reactions;
+    declare reactionCounters?: ReactionCounter[];
     declare reacted?: Reacted;
     declare replyCount?: number;
     declare replies?: RepliesResponse;
     declare post?: { id: string };
-    declare data?: any[];
+    declare data?: ContentItem[];
 
     constructor(data: Record<string, any> = {}) {
         super(data);

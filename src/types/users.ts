@@ -31,7 +31,8 @@ export class Commentator extends BaseUser {
 export class CurrentUser extends BaseUser {
     declare email?: string;
     declare blogUrl?: string;
-    declare hasBlog?: boolean;
-    declare signalAccessToken?: string;
-    declare createdAt?: string;
+    declare isBlogger?: boolean;
+    declare blog?: { url: string; [key: string]: any };
+    declare locale?: string;
+    declare timezone?: number;
 }

@@ -124,7 +124,7 @@ export class DialogWithUser extends BaseObject {
 
 export class DialogsResponse extends BaseObject {
     declare data: Dialog[];
-    declare extra?: { isLast?: boolean; offset?: string };
+    declare extra?: { offset?: number; total?: number };
 
     constructor(data: Record<string, any> = {}) {
         super(data);

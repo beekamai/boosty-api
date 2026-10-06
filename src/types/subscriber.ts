@@ -1,5 +1,6 @@
 import { BaseObject } from "./base";
 import { BaseUser } from "./users";
+import type { SubscriptionLevel } from "./subscription";
 
 /**
  * Blog subscriber (GET /v1/blog/{blog}/subscribers). Fields verified against a live response:
@@ -19,7 +20,7 @@ export class Subscriber extends BaseUser {
     declare isOfficial?: boolean;
     declare canWrite?: boolean;
     declare isBlackListed?: boolean;
-    declare level?: Record<string, any>;
+    declare level?: SubscriptionLevel;
     declare levelId?: number;
 }
 

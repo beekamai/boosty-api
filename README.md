@@ -83,7 +83,7 @@ A **non-empty `device_id` is required** for token refresh.
 | Namespace | Methods (selected) | Status |
 |---|---|---|
 | `posts` | `list` `get` `create` `update` `delete` `getDeferredAccess` `updateDeferredAccess` | ✅ reads / 🟡 writes |
-| `comments` | `list` `replies` `create` `like` `unlike` | ✅ list / 🟡 rest |
+| `comments` | `list` `replies` `create` `like` `unlike` | ✅ list, replies / 🟡 rest |
 | `blog` | `profile` `subscribers` `subscriptionLevels` `blacklist` | ✅ |
 | `user` | `current` | ✅ |
 | `media` | `list` (media_album; `type`: `all` `image` `video` `audio`) | ✅ |
@@ -96,16 +96,20 @@ Legacy aliases `api.getPost`, `api.getPostComments`, `api.request` are kept for 
 
 ### Recipes
 
-**Pagination** — list endpoints return `extra.offset`; loop until it is empty:
+**Pagination** — post lists return `extra.offset` and `extra.isLast`; pass the offset back until `isLast`:
 
 ```ts
 let offset: string | undefined;
-do {
+let isLast = false;
+while (!isLast) {
   const page = await api.posts.list("boosty", { limit: 20, offset });
   for (const post of page.data ?? []) console.log(post.title);
   offset = page.extra?.offset;
-} while (offset);
+  isLast = page.extra?.isLast ?? true;
+}
 ```
+
+Other lists page differently: subscribers return `offset` / `total` at the top level, dialogs in `extra`.
 
 **Send a message** — build content blocks with `buildMessage`:
 
@@ -159,7 +163,7 @@ src/
   auth/           Auth, AuthData, FileAuthDataResolver
   resources/      posts, comments, blog, user, media, social, feed, messaging, income
   types/          models (extend BaseObject; fields use `declare`)
-  utils/          logging, post (renderText), video (getVideoSizes), browser_login (Puppeteer), consts
+  utils/          logging, post (renderText), video (getVideoSizes), browser_login (Puppeteer), message (textBlock, linkBlock, buildMessage), consts
 examples/         demo.ts, login.ts
 ```
 </details>
@@ -250,7 +254,7 @@ cookie `_clientId` — это device id. `auth.json` использует **snak
 | Неймспейс | Методы (выборочно) | Статус |
 |---|---|---|
 | `posts` | `list` `get` `create` `update` `delete` `getDeferredAccess` `updateDeferredAccess` | ✅ чтение / 🟡 запись |
-| `comments` | `list` `replies` `create` `like` `unlike` | ✅ list / 🟡 остальное |
+| `comments` | `list` `replies` `create` `like` `unlike` | ✅ list, replies / 🟡 остальное |
 | `blog` | `profile` `subscribers` `subscriptionLevels` `blacklist` | ✅ |
 | `user` | `current` | ✅ |
 | `media` | `list` (media_album; `type`: `all` `image` `video` `audio`) | ✅ |
@@ -263,16 +267,20 @@ cookie `_clientId` — это device id. `auth.json` использует **snak
 
 ### Рецепты
 
-**Пагинация** — list-методы возвращают `extra.offset`; крутим, пока он не пуст:
+**Пагинация** — списки постов возвращают `extra.offset` и `extra.isLast`; передаём offset обратно, пока не `isLast`:
 
 ```ts
 let offset: string | undefined;
-do {
+let isLast = false;
+while (!isLast) {
   const page = await api.posts.list("boosty", { limit: 20, offset });
   for (const post of page.data ?? []) console.log(post.title);
   offset = page.extra?.offset;
-} while (offset);
+  isLast = page.extra?.isLast ?? true;
+}
 ```
+
+Другие списки листаются иначе: у подписчиков `offset` / `total` лежат на верхнем уровне, у диалогов — в `extra`.
 
 **Отправка сообщения** — собираем блоки контента через `buildMessage`:
 
@@ -315,7 +323,7 @@ src/
   auth/           Auth, AuthData, FileAuthDataResolver
   resources/      posts, comments, blog, user, media, social, feed, messaging, income
   types/          модели (наследуют BaseObject; поля через `declare`)
-  utils/          logging, post (renderText), video (getVideoSizes), browser_login (Puppeteer), consts
+  utils/          logging, post (renderText), video (getVideoSizes), browser_login (Puppeteer), message (textBlock, linkBlock, buildMessage), consts
 examples/         demo.ts, login.ts
 ```
 </details>

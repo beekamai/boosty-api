@@ -1,4 +1,5 @@
 import { BaseObject } from "./base";
+import type { ContentItem } from "./content";
 
 export type PlayerUrlsSizeNames =
     | "ultra_hd"
@@ -30,6 +31,13 @@ export class Text extends BaseObject {
     declare modificator: string;
 }
 
+/** Heading block. `content` has the same format as in a text block. */
+export class Header extends BaseObject {
+    type: "header" = "header";
+    declare content: string;
+    declare modificator: string;
+}
+
 export class Link extends BaseObject {
     type: "link" = "link";
     declare content: string;
@@ -50,6 +58,18 @@ export class Smile extends BaseObject {
     declare mediumUrl: string;
     declare largeUrl: string;
     declare isAnimated: boolean;
+}
+
+/** Item of a list block: its own content blocks plus nested items. */
+export interface ListItem {
+    data: ContentItem[];
+    items: ListItem[];
+}
+
+export class ListContent extends BaseObject {
+    type: "list" = "list";
+    declare items: ListItem[];
+    declare style: string;
 }
 
 export class FileContent extends BaseObject {
