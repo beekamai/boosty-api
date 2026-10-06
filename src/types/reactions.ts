@@ -24,6 +24,6 @@ export class Reacted extends BaseObject {
 }
 
 export class ReactionCounter extends BaseObject {
-    declare type: string;
+    declare type: ReactionName;
     declare count: number;
 }

@@ -1,5 +1,4 @@
 import { BaseObject } from "./base";
-import type { ContentItem } from "./content";
 
 export type PlayerUrlsSizeNames =
     | "ultra_hd"
@@ -133,3 +132,9 @@ export class Video extends BaseObject {
     declare uploadStatus?: string;
     declare status: string;
 }
+
+/**
+ * A content block as returned by the API (posts, comments, blog description). The discriminator is `type`:
+ * text | header | link | video(LinkToVideo) | smile | file | list | audio_file | ok_video(Video) | image
+ */
+export type ContentItem = Text | Header | Link | LinkToVideo | Smile | FileContent | ListContent | Audio | Image | Video;
