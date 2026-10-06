@@ -17,6 +17,8 @@ export type PlayerUrlsSizeNames =
     | "live_playback_hls"
     | "live_playback_dash"
     | "live_ondemand_hls"
+    | "ondemand_hls"
+    | "ondemand_dash"
     | "live_cmaf";
 
 export class PlayerUrl extends BaseObject {

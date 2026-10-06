@@ -2,9 +2,10 @@ import { BaseObject } from "./base";
 import { TeaserContent } from "./teaser";
 
 export class Currency extends BaseObject {
-    declare USD: number;
     declare RUB: number;
-    declare EUR: number;
+    /** USD and EUR are absent for blogs without foreign currency conversion. */
+    declare USD?: number;
+    declare EUR?: number;
 }
 
 export class Tag extends BaseObject {
