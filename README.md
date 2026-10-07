@@ -1,5 +1,7 @@
 # boosty-api
 
+[![npm](https://img.shields.io/npm/v/boosty-api?logo=npm&color=cb3837)](https://www.npmjs.com/package/boosty-api)
+[![GitHub](https://img.shields.io/github/stars/beekamai/boosty-api?logo=github&label=GitHub)](https://github.com/beekamai/boosty-api)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript&logoColor=white)
 ![Bun](https://img.shields.io/badge/Bun-%E2%89%A51.1-000000?logo=bun&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-3da639)
@@ -50,8 +52,9 @@ const profile = await api.blog.profile("boosty");
 const levels = await api.blog.subscriptionLevels("boosty");
 ```
 
-> Interactive browser login (`api`'s `interactiveLogin`) needs the optional `puppeteer` dependency:
-> `npm i puppeteer`. Everything else works without it.
+> Interactive browser login (`interactiveLogin`) needs `puppeteer`, an optional peer dependency that is not
+> installed for you: `npm i puppeteer` (version 23 or newer; puppeteer 25 needs Node 22.12+). Everything else
+> works without it.
 
 ### Authentication
 
@@ -250,8 +253,9 @@ const profile = await api.blog.profile("boosty");
 const levels = await api.blog.subscriptionLevels("boosty");
 ```
 
-> Интерактивный вход через браузер (`interactiveLogin`) требует опциональной зависимости
-> `puppeteer`: `npm i puppeteer`. Всё остальное работает без неё.
+> Интерактивный вход через браузер (`interactiveLogin`) требует `puppeteer` — необязательную peer-зависимость,
+> которая сама не ставится: `npm i puppeteer` (версия 23 и новее; puppeteer 25 требует Node 22.12+). Всё
+> остальное работает без неё.
 
 ```bash
 bun run dev          # запуск examples/demo.ts
@@ -412,3 +416,11 @@ Pull request'ы проверяются CI до ревью:
 ### Лицензия
 
 MIT.
+
+---
+
+## Star history
+
+<a href="https://star-history.com/#beekamai/boosty-api&Date">
+  <img src="https://api.star-history.com/svg?repos=beekamai/boosty-api&type=Date" alt="Star History Chart" width="600" />
+</a>

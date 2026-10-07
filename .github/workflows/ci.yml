@@ -30,7 +30,7 @@ jobs:
         with:
           bun-version: '1.4'
 
-      # puppeteer is an optional dependency, needed here only for its types;
+      # puppeteer is a dev dependency, needed here only for its types;
       # without this the install pulls a ~150 MB Chromium.
       - name: Install
         run: bun install

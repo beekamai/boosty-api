@@ -56,6 +56,7 @@ export async function interactiveLogin(
     await page.waitForNavigation({ waitUntil: "networkidle2", timeout: 0 }); // 0 = wait indefinitely
 
     // Extract cookies after login
+    // Page-level APIs on purpose: puppeteer is a peer from 23 up, and their replacements appeared later
     const cookies = await page.cookies();
     const authCookie = cookies.find((cookie) => cookie.name === "auth");
     const clientIdCookie = cookies.find((cookie) => cookie.name === "_clientId");
