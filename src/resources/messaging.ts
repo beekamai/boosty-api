@@ -74,9 +74,8 @@ export class MessagingResource extends BaseResource {
     /**
      * Mark notifications as read. Returns the feed with updated counters. An empty list sends nothing:
      * the server answers 200 to an empty `event_id` too, and what it does then is unknown.
-     * @experimental PUT /v1/notification/standalone/read/, form `event_id=1,2` (web client format).
-     *   Live: a real id answers 200 with the feed, a non-numeric one 400 invalid_param; the flip of
-     *   `isRead` itself was not observed (no unread events at the time).
+     * @verified PUT /v1/notification/standalone/read/, form `event_id=1,2` (web client format): an unread
+     *   event flipped to `isRead: true` live, a non-numeric id answers 400 invalid_param.
      */
     async markNotificationsRead(eventIds: number[]): Promise<NotificationsResponse> {
         if (eventIds.length === 0) return this.notifications();

@@ -1,11 +1,12 @@
 import { BaseObject } from "./base";
 import { BaseUser } from "./users";
 import { SubscriptionLevel } from "./subscription";
+import { DonationInfo } from "./messaging";
 
 /** An event of the notification feed (GET /v1/notification/standalone/event/). */
 export class Notification extends BaseObject {
     declare id: number;
-    /** For example "subscriber_new". */
+    /** For example "subscriber_new" or "donation_new". */
     declare type: string;
     /** Unix time, seconds. */
     declare eventTime?: number;
@@ -15,11 +16,14 @@ export class Notification extends BaseObject {
     declare aggregation?: { id: number; type: string };
     /** Present on subscription events. */
     declare subscriptionLevel?: SubscriptionLevel;
+    /** Present on donation events ("donation_new"). */
+    declare donation?: DonationInfo;
 
     constructor(data: Record<string, any> = {}) {
         super(data);
         if (data.author) this.author = new BaseUser(data.author);
         if (data.subscriptionLevel) this.subscriptionLevel = new SubscriptionLevel(data.subscriptionLevel);
+        if (data.donation) this.donation = new DonationInfo(data.donation);
     }
 }
 

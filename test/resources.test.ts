@@ -1,6 +1,6 @@
 /* Resources against a fake HTTP client: what goes on the wire and how responses are wrapped. */
 import { describe, expect, test } from "bun:test";
-import { API, Auth, AuthData, ABCAuthDataResolver, BlogProfile, Message, Notification, SubscriptionLevel, type HTTPClient } from "../src";
+import { API, Auth, AuthData, ABCAuthDataResolver, BlogProfile, DonationInfo, Message, Notification, SubscriptionLevel, type HTTPClient } from "../src";
 
 /** Anonymous auth kept in memory: the default resolver reads and rewrites ./auth.json. */
 class MemoryResolver extends ABCAuthDataResolver {
@@ -26,7 +26,10 @@ function fakeApi(body: unknown) {
 const FEED = {
     data: {
         notificationStandalone: {
-            events: [{ id: 9, type: "subscriber_new", isRead: false, eventTime: 1, author: { id: 1, name: "a" }, subscriptionLevel: { id: 2, price: 100 } }],
+            events: [
+                { id: 9, type: "subscriber_new", isRead: false, eventTime: 1, author: { id: 1, name: "a" }, subscriptionLevel: { id: 2, price: 100 } },
+                { id: 10, type: "donation_new", isRead: true, eventTime: 2, donation: { id: 3, amount: 50, currencyAmounts: { RUB: 50 } } },
+            ],
             count: { total: 1, unread: 1, byEventType: [{ type: "subscriber_new", total: 1, unread: 1 }] },
             updateTime: 5,
         },
@@ -41,6 +44,8 @@ describe("notifications", () => {
         expect(calls[0].url.pathname).toBe("/v1/notification/standalone/event/");
         expect(feed.events[0]).toBeInstanceOf(Notification);
         expect(feed.events[0].subscriptionLevel).toBeInstanceOf(SubscriptionLevel);
+        expect(feed.events[1].donation).toBeInstanceOf(DonationInfo);
+        expect(feed.events[1].donation?.amount).toBe(50);
         expect(feed.count?.unread).toBe(1);
         expect(feed.updateTime).toBe(5);
     });
