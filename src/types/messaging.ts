@@ -38,7 +38,10 @@ export class DialogRelation extends BaseObject {
 
 /** Donation attached to a message in a conversation. */
 export class DonationInfo extends BaseObject {
+    declare id?: number;
     declare amount: number;
+    declare bloggerId?: number;
+    declare targetId?: number;
     declare type?: string;
     declare createdAt?: number;
     declare isFeePaid?: boolean;
