@@ -1,0 +1,119 @@
+name: CI
+
+# Pull requests come from strangers' forks. The `pull_request` trigger runs them
+# with a read-only token and no secrets; never switch this to
+# `pull_request_target`, which hands fork code a write token.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck, test, build
+    runs-on: ubuntu-latest
+    steps:
+      # Actions are pinned by commit: a moved tag would run someone else's code here.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: '1.4'
+
+      # puppeteer is an optional dependency, needed here only for its types;
+      # without this the install pulls a ~150 MB Chromium.
+      - name: Install
+        run: bun install
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Test
+        run: bun test
+
+      - name: Build
+        run: bun run build
+
+      # `files` in package.json decides what reaches npm; a PR widening it would
+      # publish whatever it adds.
+      - name: Package contents
+        run: |
+          npm pack --dry-run --json --ignore-scripts > "$RUNNER_TEMP/pack.json"
+          bun -e '
+            const [pack] = JSON.parse(await Bun.file(process.env.RUNNER_TEMP + "/pack.json").text());
+            const extra = pack.files.map((f) => f.path).filter((p) => !/^(dist\/|README\.md$|LICENSE$|package\.json$)/.test(p));
+            if (extra.length) { console.error("Unexpected files in the npm package:\n" + extra.join("\n")); process.exit(1); }
+            console.log(pack.files.length + " files, " + pack.size + " bytes");
+          '
+
+      # The README promises Node 18+; load both builds on the oldest supported Node.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '18'
+
+      - name: Load on Node 18
+        run: |
+          node -e "if (typeof require('./dist/index.cjs').API !== 'function') process.exit(1)"
+          node -e "import('./dist/index.js').then((m) => { if (typeof m.API !== 'function') process.exit(1) })"
+
+  pr-guard:
+    name: PR guard
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    env:
+      LC_ALL: C.UTF-8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Changed files
+        run: git diff --name-only --diff-filter=ACMR "origin/$BASE_REF...HEAD" > "$RUNNER_TEMP/changed.txt"
+        env:
+          BASE_REF: ${{ github.base_ref }}
+
+      # Trojan Source: bidi controls reorder what a reviewer sees versus what
+      # runs; zero-width characters hide inside identifiers and strings.
+      - name: Invisible characters
+        run: |
+          fail=0
+          while IFS= read -r f; do
+            [ -f "$f" ] || continue
+            grep -nP '[\x{202A}-\x{202E}\x{2066}-\x{2069}]' "$f" && { echo "::error file=$f::Bidi control character"; fail=1; }
+            case "$f" in
+              src/*|test/*|examples/*|*.json|*.yml|*.ts)
+                grep -nP '[\x{200B}-\x{200D}\x{2060}\x{FEFF}]' "$f" && { echo "::error file=$f::Zero-width character"; fail=1; } ;;
+            esac
+          done < "$RUNNER_TEMP/changed.txt"
+          exit $fail
+
+      - name: No secrets files
+        run: |
+          bad=$(grep -E '(^|/)(auth\.json|\.env(\..*)?|\.npmrc|.*\.(pem|key|p12|pfx))$' "$RUNNER_TEMP/changed.txt" | grep -v '\.example$' || true)
+          if [ -n "$bad" ]; then
+            echo "$bad" | while IFS= read -r f; do echo "::error file=$f::Credentials file in the PR"; done
+            exit 1
+          fi
+
+      # Not a failure: legitimate PRs touch these too. The warning makes sure
+      # they get read line by line before merge.
+      - name: Sensitive paths
+        run: |
+          hits=$(grep -E '^(package\.json|tsconfig\.json|tsup\.config\.ts|bunfig\.toml|\.github/)' "$RUNNER_TEMP/changed.txt" || true)
+          if [ -n "$hits" ]; then
+            echo "$hits" | while IFS= read -r f; do echo "::warning file=$f::Build, dependency or CI config changed: review by hand"; done
+            { echo "### Sensitive paths changed"; echo; echo "$hits" | sed 's/^/- `/; s/$/`/'; } >> "$GITHUB_STEP_SUMMARY"
+          fi

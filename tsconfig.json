@@ -28,6 +28,6 @@
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/**/*.ts", "examples/**/*.ts"],
+  "include": ["src/**/*.ts", "examples/**/*.ts", "test/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }
