@@ -60,7 +60,14 @@ export class Post extends BaseObject {
     declare isPinned?: boolean;
     declare sortOrder?: number;
     declare reactionsDisabled?: boolean;
-    declare showcaseStatus?: string;
+    /** A string in the responses seen so far; other shapes have been reported upstream. */
+    declare showcaseStatus?: string | Record<string, unknown> | unknown[] | null;
+    declare isShowcaseVisible?: boolean;
+    declare isMarketing?: boolean;
+    declare promo?: boolean | null;
+    declare hasAdultContent?: boolean;
+    declare currencyDonations?: Currency;
+    declare bundleIds?: string[];
     declare frame?: Record<string, any> | null;
 
     constructor(data: Record<string, any> = {}) {

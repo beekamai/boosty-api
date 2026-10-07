@@ -81,6 +81,7 @@ export class FileContent extends BaseObject {
     declare title: string;
     declare size: number;
     declare isMigrated?: boolean;
+    declare isInvalid?: boolean;
 }
 
 export class Audio extends BaseObject {
