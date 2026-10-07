@@ -1,5 +1,5 @@
 /* resources/blog.ts — blog: profile, subscribers, subscription levels, blacklist. */
-import { BaseResource } from "../http";
+import { BaseResource, apiPath } from "../http";
 import { BlogProfile } from "../types/blog";
 import { SubscribersResponse } from "../types/subscriber";
 import { SubscriptionLevelsResponse } from "../types/subscription";
@@ -22,7 +22,7 @@ export class BlogResource extends BaseResource {
      * @verified GET /v1/blog/{blog} (confirmed by a live 200 response).
      */
     async profile(blogName: string): Promise<BlogProfile> {
-        const json = await this.core.request("GET", `/v1/blog/${blogName}`);
+        const json = await this.core.request("GET", apiPath`/v1/blog/${blogName}`);
         return new BlogProfile(json);
     }
 
@@ -31,7 +31,7 @@ export class BlogResource extends BaseResource {
      * @verified GET /v1/blog/{blog}/subscribers (used in the original demo)
      */
     async subscribers(blogName: string, options: SubscribersOptions = {}): Promise<SubscribersResponse> {
-        const json = await this.core.request("GET", `/v1/blog/${blogName}/subscribers`, {
+        const json = await this.core.request("GET", apiPath`/v1/blog/${blogName}/subscribers`, {
             params: {
                 sort_by: options.sortBy,
                 order: options.order,
@@ -51,7 +51,7 @@ export class BlogResource extends BaseResource {
         blogName: string,
         options: { showFreeLevel?: boolean } = {}
     ): Promise<SubscriptionLevelsResponse> {
-        const json = await this.core.request("GET", `/v1/blog/${blogName}/subscription_level/`, {
+        const json = await this.core.request("GET", apiPath`/v1/blog/${blogName}/subscription_level/`, {
             params: { show_free_level: options.showFreeLevel },
         });
         return new SubscriptionLevelsResponse(json);

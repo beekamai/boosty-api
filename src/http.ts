@@ -43,6 +43,28 @@ export interface RequestOptions {
     _retried?: boolean;
 }
 
+/** Encodes one caller-supplied value as a single path segment. */
+function pathSegment(value: string | number): string {
+    const segment = String(value);
+    /* The URL parser resolves "." / ".." (even as %2e%2e) and "" changes the route, so encoding is not enough. */
+    /* "/" and "\" are rejected too: no Boosty id has them, and a server that decodes %2F before routing would split the segment. */
+    /* Lone surrogates would make encodeURIComponent throw URIError; reject them with the same TypeError. */
+    if (segment === "" || segment === "." || segment === ".." || /[/\\]|\p{Surrogate}/u.test(segment)) {
+        throw new TypeError(`Invalid path segment: ${JSON.stringify(segment)}`);
+    }
+    return encodeURIComponent(segment);
+}
+
+/**
+ * Tagged template for request paths: every interpolated value becomes exactly one encoded segment,
+ * so ids like `a?b=c` or `a#b` cannot steer the request to another endpoint. Use it with `api.request`
+ * whenever a path carries a value you did not write yourself.
+ * @throws TypeError if an interpolated value is "", ".", "..", contains "/" or "\", or a lone UTF-16 surrogate.
+ */
+export function apiPath(strings: TemplateStringsArray, ...values: Array<string | number>): string {
+    return strings.reduce((path, literal, i) => path + pathSegment(values[i - 1]!) + literal);
+}
+
 /**
  * Transport core contract that resource modules see.
  * Implemented by the API class (client.ts).

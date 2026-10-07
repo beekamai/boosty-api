@@ -1,6 +1,6 @@
 /* resources/social.ts — social actions: post likes, poll voting. */
 /* The whole module is @experimental: paths reconstructed from the web client, need verification on traffic. */
-import { BaseResource } from "../http";
+import { BaseResource, apiPath } from "../http";
 
 export class SocialResource extends BaseResource {
     /**
@@ -8,7 +8,7 @@ export class SocialResource extends BaseResource {
      * @experimental PUT /v1/blog/{blog}/post/{postId}/like
      */
     async likePost(blogName: string, postId: string): Promise<unknown> {
-        return this.core.request("PUT", `/v1/blog/${blogName}/post/${postId}/like`);
+        return this.core.request("PUT", apiPath`/v1/blog/${blogName}/post/${postId}/like`);
     }
 
     /**
@@ -16,7 +16,7 @@ export class SocialResource extends BaseResource {
      * @experimental DELETE /v1/blog/{blog}/post/{postId}/like
      */
     async unlikePost(blogName: string, postId: string): Promise<true> {
-        await this.core.request("DELETE", `/v1/blog/${blogName}/post/${postId}/like`);
+        await this.core.request("DELETE", apiPath`/v1/blog/${blogName}/post/${postId}/like`);
         return true;
     }
 
@@ -26,7 +26,7 @@ export class SocialResource extends BaseResource {
      *   For multiple choice, call several times. Verify the exact path on traffic.
      */
     async voteOption(blogName: string, pollId: number | string, optionId: number | string): Promise<unknown> {
-        return this.core.request("PUT", `/v1/blog/${blogName}/poll/${pollId}/answer/${optionId}`);
+        return this.core.request("PUT", apiPath`/v1/blog/${blogName}/poll/${pollId}/answer/${optionId}`);
     }
 
     /**
@@ -34,7 +34,7 @@ export class SocialResource extends BaseResource {
      * @experimental DELETE /v1/blog/{blog}/poll/{pollId}/answer/{optionId}
      */
     async removeVote(blogName: string, pollId: number | string, optionId: number | string): Promise<true> {
-        await this.core.request("DELETE", `/v1/blog/${blogName}/poll/${pollId}/answer/${optionId}`);
+        await this.core.request("DELETE", apiPath`/v1/blog/${blogName}/poll/${pollId}/answer/${optionId}`);
         return true;
     }
 }

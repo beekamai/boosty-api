@@ -1,6 +1,6 @@
 /* Публичная точка входа библиотеки boosty-api. */
 export { API } from "./client";
-export { BoostyError } from "./http";
+export { BoostyError, apiPath } from "./http";
 export type { HTTPClient, RequestOptions, ApiCore } from "./http";
 
 export { Auth } from "./auth/auth";

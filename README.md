@@ -158,6 +158,16 @@ try {
 }
 ```
 
+Ids go into request paths as single encoded segments. An id that is empty, `.` or `..`, or contains `/` or
+`\` throws `TypeError` before any request is sent. When you call `api.request` with values you did not write
+yourself, build the path with `apiPath`:
+
+```ts
+import { apiPath } from "boosty-api";
+
+await api.request("GET", apiPath`/v1/blog/${blogName}/post/`);
+```
+
 ### Note on `declare` fields
 
 Models extend `BaseObject`, which copies response fields in its constructor. Bun transpiles class
@@ -351,6 +361,16 @@ try {
   if (e instanceof BoostyError) console.error(e.statusCode, e.body);
   else throw e;
 }
+```
+
+Id подставляются в путь запроса как один закодированный сегмент. Пустой id, `.` или `..`, а также id с `/` или
+`\` бросают `TypeError` ещё до отправки запроса. Если вызываете `api.request` со значениями, которые писали не
+вы, собирайте путь через `apiPath`:
+
+```ts
+import { apiPath } from "boosty-api";
+
+await api.request("GET", apiPath`/v1/blog/${blogName}/post/`);
 ```
 
 ### Про поля `declare`

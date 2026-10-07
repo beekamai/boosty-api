@@ -1,7 +1,7 @@
 /* resources/posts.ts — blog posts (CRUD) and deferred access. */
 /* Statuses: list/get/comments — @verified (present in the barsikus007/boosty reference). */
 /*           create/update/delete/deferred_access — @verified by paths, write body @experimental. */
-import { BaseResource } from "../http";
+import { BaseResource, apiPath } from "../http";
 import { Post, PostsResponse, type EditedPost, type NewPost } from "../types/post";
 import {
     DeferredAccess,
@@ -27,7 +27,7 @@ export class PostsResource extends BaseResource {
      * @verified GET /v1/blog/{blog}/post/
      */
     async list(blogName: string, options: ListPostsOptions = {}): Promise<PostsResponse> {
-        const json = await this.core.request("GET", `/v1/blog/${blogName}/post/`, {
+        const json = await this.core.request("GET", apiPath`/v1/blog/${blogName}/post/`, {
             params: {
                 limit: options.limit,
                 offset: options.offset,
@@ -51,7 +51,7 @@ export class PostsResource extends BaseResource {
         postId: string,
         options: { commentsLimit?: number; replyLimit?: number } = {}
     ): Promise<Post> {
-        const json = await this.core.request("GET", `/v1/blog/${blogName}/post/${postId}`, {
+        const json = await this.core.request("GET", apiPath`/v1/blog/${blogName}/post/${postId}`, {
             params: { comments_limit: options.commentsLimit, reply_limit: options.replyLimit },
         });
         return new Post(json);
@@ -63,7 +63,7 @@ export class PostsResource extends BaseResource {
      * @experimental body format (form + JSON fields data/teaser_data) — verify on live traffic.
      */
     async create(blogName: string, newPost: NewPost): Promise<Post> {
-        const json = await this.core.request("POST", `/v1/blog/${blogName}/post/`, {
+        const json = await this.core.request("POST", apiPath`/v1/blog/${blogName}/post/`, {
             form: this.buildPostForm(newPost, true),
         });
         return new Post(json);
@@ -75,7 +75,7 @@ export class PostsResource extends BaseResource {
      * @experimental body format — see create().
      */
     async update(blogName: string, postId: string, editedPost: EditedPost): Promise<Post> {
-        const json = await this.core.request("PUT", `/v1/blog/${blogName}/post/${postId}`, {
+        const json = await this.core.request("PUT", apiPath`/v1/blog/${blogName}/post/${postId}`, {
             form: this.buildPostForm(editedPost, false),
         });
         return new Post(json);
@@ -86,7 +86,7 @@ export class PostsResource extends BaseResource {
      * @verified DELETE /v1/blog/{blog}/post/{postId}
      */
     async delete(blogName: string, postId: string): Promise<true> {
-        await this.core.request("DELETE", `/v1/blog/${blogName}/post/${postId}`);
+        await this.core.request("DELETE", apiPath`/v1/blog/${blogName}/post/${postId}`);
         return true;
     }
 
@@ -97,7 +97,7 @@ export class PostsResource extends BaseResource {
     async getDeferredAccess(blogName: string, postId: string): Promise<DeferredAccessResponse> {
         const json = await this.core.request(
             "GET",
-            `/v1/blog/${blogName}/post/${postId}/deferred_access`
+            apiPath`/v1/blog/${blogName}/post/${postId}/deferred_access`
         );
         return new DeferredAccessResponse(json);
     }
@@ -113,7 +113,7 @@ export class PostsResource extends BaseResource {
     ): Promise<DeferredAccess> {
         const json = await this.core.request(
             "PUT",
-            `/v1/blog/${blogName}/post/${postId}/deferred_access`,
+            apiPath`/v1/blog/${blogName}/post/${postId}/deferred_access`,
             { json: { ...edited } }
         );
         return new DeferredAccess(json?.data ?? json);
