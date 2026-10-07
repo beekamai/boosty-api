@@ -14,15 +14,17 @@
 ## English
 
 Unofficial TypeScript client for the **internal** [Boosty](https://boosty.to) API — a port and
-extension of [`barsikus007/boosty`](https://github.com/barsikus007/boosty), Bun-first, with broad
-endpoint coverage (posts, comments, blog, user, media, social, feed, messaging, income).
+extension of [`barsikus007/boosty`](https://github.com/barsikus007/boosty), Bun-first. It covers what you
+need to run a blog from code: posts, comments, messaging, your account, blog statistics and the whole income
+side (sales, donations, holds, payouts). It does not wrap every route the Boosty web client calls.
 
 > ⚠️ This is an **undocumented** internal API. It can change without notice. Use it only to access
 > **your own** content and within Boosty's Terms of Service.
 
 ### Features
 
-- 📦 **Resource namespaces** — `api.posts`, `api.comments`, `api.blog`, `api.user`, `api.media`, `api.social`, `api.feed`, `api.messaging`, `api.income`.
+- 📦 **Resource namespaces** — `api.posts`, `api.comments`, `api.blog`, `api.user`, `api.media`, `api.social`, `api.feed`, `api.search`, `api.messaging`, `api.income`, `api.stats`, `api.targets`.
+- 📊 **Creator dashboard** — `api.stats` and `api.income` read everything the Boosty statistics and payouts pages show.
 - 🔓 **Anonymous mode** — public posts/comments/profile work without a token.
 - 🔐 **Easy auth** — `npx boosty-api login` (browser or a pasted Cookie header), `Auth.fromTokens` for servers; tokens refresh before expiry and after a 401.
 - 🧩 **Tolerant models** — unknown response fields are preserved (resilient to Boosty schema drift).
@@ -106,14 +108,21 @@ returns the current set at any time.
 | Namespace | Methods (selected) | Status |
 |---|---|---|
 | `posts` | `list` `get` `create` `update` `delete` `getDeferredAccess` `updateDeferredAccess` | ✅ reads / 🟡 writes |
-| `comments` | `list` `replies` (by the parent's `intId`) `create` `like` `unlike` | ✅ list, replies / 🟡 rest |
-| `blog` | `profile` `subscribers` `subscriptionLevels` `blacklist` | ✅ |
-| `user` | `current` | ✅ |
+| `comments` | `list` `replies` (by the parent's `intId`) `create` `react` `removeReaction` `like` `unlike` | ✅ list, replies / 🟡 rest |
+| `blog` | `profile` `subscribers` `subscriptionLevels` `subscriptionLevel` `blacklist` `unsubscribeReasons` `poll` `pollVoters` | ✅ / 🟡 polls |
+| `user` | reads: `current` `subscriptions` `sessions` `notificationSettings` `paymentCards` `availableBlogCurrencies`; writes: `updateProfile` `updateNotificationSetting` `updateDialogSettings` `setLocale` `endSessions` | ✅ reads / 🟡 writes |
 | `media` | `list` (media_album; `type`: `all` `image` `video` `audio`) | ✅ |
-| `social` | `likePost` `unlikePost` `voteOption` `removeVote` | 🟡 |
+| `social` | `reactToPost` `removePostReaction` `likePost` `unlikePost` `vote` `voteOption` `removeVote` | 🟡 |
 | `feed` | `posts` `searchBlogs` | ✅ |
+| `search` | `postsInFeed` `postsInBlog` `blogSuggest` `feedTags` | ✅ |
 | `messaging` | `dialogs` `dialogWithUser` `createDialog` `messages` `sendMessage` `notifications` `markNotificationsRead` `deleteNotification(s)` | ✅ / 🟡 notification deletes |
-| `income` | `sales` (POST form; may be "Category disabled" per account) | ⚠️ |
+| `income` | `postSales` `donations` `bundleSales` `holds` `broadcastSales` `postSalesByDate` `postSalesDays` `bundleSalesByDate` `bundleSalesDays` `payoutMethods` `payouts` `payoutHistory` `defaultCurrency` | ✅ |
+| `stats` | `summary` `metrics` `charts` `events` `visits` `paymentSources` `referrals` `referralUsers` `searchUsers` `reportInfo` `report` `post` | ✅ / 🟡 `post` |
+| `targets` | reads: `list` `get`; writes: `createMoney` `createSubscribers` `edit` `remove` | ✅ reads / 🟡 writes |
+
+Sales lists sort with `order: "gt"` (newest or largest first) or `"lt"`. `income.sales` is deprecated: the web client does not call it. `stats.report` builds a new report file on
+every call, `reportInfo` returns the last one. Donation payers and payout data include e-mail addresses
+and amounts: treat them as personal data.
 
 Legacy aliases `api.getPost`, `api.getPostComments`, `api.request` are kept for compatibility.
 
@@ -153,6 +162,19 @@ if (!probe.relation?.canWrite) throw new Error("this user cannot be messaged fir
 
 const dialogId = probe.id ?? (await api.messaging.createDialog(userId)).id;
 await api.messaging.sendMessage(dialogId, buildMessage(["Here is your link:", { link: url }]));
+```
+
+**Creator statistics and income** — numbers from the dashboard, timestamps in Unix seconds:
+
+```ts
+const blog = (await api.user.current()).blogUrl;
+if (!blog) throw new Error("this account has no blog");
+const now = Math.floor(Date.now() / 1000);
+
+const summary = await api.stats.summary(blog); // balance, hold, income, payoutSum, followersCount
+const month = await api.stats.metrics(blog, now - 30 * 86400, now); // totalMoney, donationsMoney, incSubscribers…
+const { data: donations } = await api.income.donations(blog, { limit: 20, sortBy: "time", order: "gt" });
+const payouts = await api.income.payoutHistory(blog);
 ```
 
 **Render post text** — `post.text` (or `renderText(blocks)` for comments and blog descriptions) gives plain
@@ -235,15 +257,17 @@ MIT.
 ## Русский
 
 Неофициальный TypeScript-клиент **внутреннего** API [Boosty](https://boosty.to) — порт и расширение
-[`barsikus007/boosty`](https://github.com/barsikus007/boosty), на Bun, с широким покрытием эндпоинтов
-(posts, comments, blog, user, media, social, feed, messaging, income).
+[`barsikus007/boosty`](https://github.com/barsikus007/boosty), на Bun. Покрывает то, что нужно для ведения
+блога из кода: посты, комментарии, сообщения, свой аккаунт, статистику блога и весь доход (продажи, донаты,
+холды, выплаты). Не все маршруты, которые вызывает веб-клиент Boosty, обёрнуты.
 
 > ⚠️ Это **недокументированный** внутренний API. Он может измениться без предупреждения. Используйте
 > только для доступа к **своему** контенту и в рамках правил Boosty.
 
 ### Возможности
 
-- 📦 **Resource-неймспейсы** — `api.posts`, `api.comments`, `api.blog`, `api.user`, `api.media`, `api.social`, `api.feed`, `api.messaging`, `api.income`.
+- 📦 **Resource-неймспейсы** — `api.posts`, `api.comments`, `api.blog`, `api.user`, `api.media`, `api.social`, `api.feed`, `api.search`, `api.messaging`, `api.income`, `api.stats`, `api.targets`.
+- 📊 **Кабинет автора** — `api.stats` и `api.income` читают всё, что показывают страницы статистики и выплат Boosty.
 - 🔓 **Анонимный режим** — публичные посты/комментарии/профиль работают без токена.
 - 🔐 **Простой вход** — `npx boosty-api login` (браузер или вставленный заголовок Cookie), `Auth.fromTokens` для серверов; токены обновляются до истечения и после 401.
 - 🧩 **Толерантные модели** — неизвестные поля ответа сохраняются (устойчивость к изменениям схемы Boosty).
@@ -332,14 +356,21 @@ const api = new API({ auth });
 | Неймспейс | Методы (выборочно) | Статус |
 |---|---|---|
 | `posts` | `list` `get` `create` `update` `delete` `getDeferredAccess` `updateDeferredAccess` | ✅ чтение / 🟡 запись |
-| `comments` | `list` `replies` (по `intId` родителя) `create` `like` `unlike` | ✅ list, replies / 🟡 остальное |
-| `blog` | `profile` `subscribers` `subscriptionLevels` `blacklist` | ✅ |
-| `user` | `current` | ✅ |
+| `comments` | `list` `replies` (по `intId` родителя) `create` `react` `removeReaction` `like` `unlike` | ✅ list, replies / 🟡 остальное |
+| `blog` | `profile` `subscribers` `subscriptionLevels` `subscriptionLevel` `blacklist` `unsubscribeReasons` `poll` `pollVoters` | ✅ / 🟡 опросы |
+| `user` | чтение: `current` `subscriptions` `sessions` `notificationSettings` `paymentCards` `availableBlogCurrencies`; запись: `updateProfile` `updateNotificationSetting` `updateDialogSettings` `setLocale` `endSessions` | ✅ чтение / 🟡 запись |
 | `media` | `list` (media_album; `type`: `all` `image` `video` `audio`) | ✅ |
-| `social` | `likePost` `unlikePost` `voteOption` `removeVote` | 🟡 |
+| `social` | `reactToPost` `removePostReaction` `likePost` `unlikePost` `vote` `voteOption` `removeVote` | 🟡 |
 | `feed` | `posts` `searchBlogs` | ✅ |
+| `search` | `postsInFeed` `postsInBlog` `blogSuggest` `feedTags` | ✅ |
 | `messaging` | `dialogs` `dialogWithUser` `createDialog` `messages` `sendMessage` `notifications` `markNotificationsRead` `deleteNotification(s)` | ✅ / 🟡 удаление уведомлений |
-| `income` | `sales` (POST form; может быть «Category disabled» у аккаунта) | ⚠️ |
+| `income` | `postSales` `donations` `bundleSales` `holds` `broadcastSales` `postSalesByDate` `postSalesDays` `bundleSalesByDate` `bundleSalesDays` `payoutMethods` `payouts` `payoutHistory` `defaultCurrency` | ✅ |
+| `stats` | `summary` `metrics` `charts` `events` `visits` `paymentSources` `referrals` `referralUsers` `searchUsers` `reportInfo` `report` `post` | ✅ / 🟡 `post` |
+| `targets` | чтение: `list` `get`; запись: `createMoney` `createSubscribers` `edit` `remove` | ✅ чтение / 🟡 запись |
+
+Списки продаж сортируются `order: "gt"` (сначала новые или крупные) или `"lt"`. `income.sales` устарел: веб-клиент его не вызывает. `stats.report` при каждом вызове собирает новый файл
+отчёта, `reportInfo` возвращает последний. В донатах и выплатах есть e-mail плательщиков и суммы —
+обращайтесь с ними как с персональными данными.
 
 Легаси-алиасы `api.getPost`, `api.getPostComments`, `api.request` сохранены для совместимости.
 
@@ -379,6 +410,19 @@ if (!probe.relation?.canWrite) throw new Error("этому пользовате�
 
 const dialogId = probe.id ?? (await api.messaging.createDialog(userId)).id;
 await api.messaging.sendMessage(dialogId, buildMessage(["Ваша ссылка:", { link: url }]));
+```
+
+**Статистика и доход автора** — цифры из кабинета, время в Unix-секундах:
+
+```ts
+const blog = (await api.user.current()).blogUrl;
+if (!blog) throw new Error("у этого аккаунта нет блога");
+const now = Math.floor(Date.now() / 1000);
+
+const summary = await api.stats.summary(blog); // balance, hold, income, payoutSum, followersCount
+const month = await api.stats.metrics(blog, now - 30 * 86400, now); // totalMoney, donationsMoney, incSubscribers…
+const { data: donations } = await api.income.donations(blog, { limit: 20, sortBy: "time", order: "gt" });
+const payouts = await api.income.payoutHistory(blog);
 ```
 
 **Текст поста** — `post.text` (или `renderText(blocks)` для комментариев и описания блога) отдаёт обычный
