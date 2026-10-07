@@ -294,10 +294,10 @@ describe("boosty-api login", () => {
     });
 
     test("the account name is printed without control characters", async () => {
-        const d = deps({ httpClient: fakeBoosty({ name: "Evil\u001b[2K\rMara‮" }).http });
+        const d = deps({ httpClient: fakeBoosty({ name: "Evil\u001b[2K\rMara\u202e" }).http });
         expect(await runCli(["login", `--cookie=${cookieHeader()}`, "--file", join(tmp(), "auth.json")], d)).toBe(0);
         expect(d.outLines.join("\n")).toContain("Logged in as Evil[2KMara.");
-        expect(d.outLines.join("\n")).not.toMatch(/[\u001b\r‮]/);
+        expect(d.outLines.join("\n")).not.toMatch(/[\u001b\r\u202e]/);
     });
 
     test("an empty file may be overwritten", async () => {
