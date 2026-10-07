@@ -24,7 +24,7 @@ endpoint coverage (posts, comments, blog, user, media, social, feed, messaging, 
 
 - 📦 **Resource namespaces** — `api.posts`, `api.comments`, `api.blog`, `api.user`, `api.media`, `api.social`, `api.feed`, `api.messaging`, `api.income`.
 - 🔓 **Anonymous mode** — public posts/comments/profile work without a token.
-- 🔐 **Auth with auto-refresh** — bearer token, proactive (by `expires_at`) and reactive (401) refresh with a single-retry guard.
+- 🔐 **Easy auth** — `npx boosty-api login` (browser or a pasted Cookie header), `Auth.fromTokens` for servers; tokens refresh before expiry and after a 401.
 - 🧩 **Tolerant models** — unknown response fields are preserved (resilient to Boosty schema drift).
 - 🏷️ **Honest status tags** — every method is annotated `@verified` / `@experimental` / `@unverified`.
 
@@ -58,25 +58,44 @@ const levels = await api.blog.subscriptionLevels("boosty");
 
 ### Authentication
 
-Public endpoints work anonymously. For private content and account operations you need a token in
-`auth.json` (kept out of git via `.gitignore`):
+Public endpoints work anonymously. For your own content and account operations, log in once:
 
 ```bash
-cp auth.json.example auth.json   # fill in manually, or:
-bun run login                    # interactive browser login (Puppeteer)
+npx boosty-api login            # opens a browser window; needs `npm i boosty-api puppeteer`
+npx boosty-api login --cookie   # or paste the Cookie header of any boosty.to request
 ```
 
-Manual way: log in at boosty.to → DevTools → Application → Cookies. Cookie `auth` is URL-encoded JSON,
-cookie `_clientId` is the device id. `auth.json` uses **snake_case**, the cookie uses camelCase — map them:
+Both save the session to `auth.json`, and `new API()` picks it up. Keep the file out of git: it is
+owner-only on Linux and macOS, on Windows it inherits the folder's permissions.
 
-| `auth` cookie | `auth.json` field |
-|---|---|
-| `accessToken` | `access_token` |
-| `refreshToken` | `refresh_token` |
-| `expiresAt` | `expires_at` |
-| `_clientId` (cookie) | `device_id` |
+To get the Cookie header: log in at boosty.to in a private window, open DevTools → Network, click any
+request to boosty.to and copy the value of `cookie` under Request Headers. Then close the window without
+logging out: a browser that stays open refreshes the same tokens, and Boosty keeps only the newest.
 
-A **non-empty `device_id` is required** for token refresh.
+The same from code:
+
+```ts
+import { API, Auth, interactiveLogin } from "boosty-api";
+
+const api = new API({ auth: Auth.fromCookies(process.env.BOOSTY_COOKIE!) }); // the Cookie header
+const viaBrowser = new API({ auth: await interactiveLogin() });         // saved to auth.json
+```
+
+**On a server**, keep the tokens with your other secrets and store every refresh: Boosty rotates the
+refresh token, and the old one stops working.
+
+```ts
+const auth = Auth.fromTokens(
+  { accessToken, refreshToken, deviceId },                // deviceId is the `_clientId` cookie
+  { onRefresh: (tokens) => db.saveBoostyTokens(tokens) }, // awaited; if it throws, the request fails with TokenPersistError
+);
+const api = new API({ auth });
+```
+
+Tokens are refreshed before they expire and after a 401, and concurrent requests share one refresh.
+Until the new set is stored, requests fail with `TokenPersistError` and storing is retried before each
+one. Without `onRefresh` the refreshed tokens live in memory only, and a warning says so. `auth.tokens`
+returns the current set at any time.
 
 ### API status legend
 
@@ -186,7 +205,8 @@ src/
   index.ts        public entry point (barrel exports)
   client.ts       API core: request() + resource assembly + legacy aliases
   http.ts         HTTPClient (native fetch), RequestOptions, ApiCore, BaseResource, BoostyError
-  auth/           Auth, AuthData, FileAuthDataResolver
+  auth/           Auth, AuthData, File- and MemoryAuthDataResolver
+  cli.ts, cli/    the `boosty-api login` command
   resources/      posts, comments, blog, user, media, social, feed, messaging, income
   types/          models (extend BaseObject; fields use `declare`)
   utils/          logging, post (renderText), video (getVideoSizes), browser_login (Puppeteer), message (textBlock, linkBlock, buildMessage), consts
@@ -225,7 +245,7 @@ MIT.
 
 - 📦 **Resource-неймспейсы** — `api.posts`, `api.comments`, `api.blog`, `api.user`, `api.media`, `api.social`, `api.feed`, `api.messaging`, `api.income`.
 - 🔓 **Анонимный режим** — публичные посты/комментарии/профиль работают без токена.
-- 🔐 **Авторизация с авто-refresh** — bearer-токен, проактивный (по `expires_at`) и реактивный (401) refresh с защитой от рекурсии.
+- 🔐 **Простой вход** — `npx boosty-api login` (браузер или вставленный заголовок Cookie), `Auth.fromTokens` для серверов; токены обновляются до истечения и после 401.
 - 🧩 **Толерантные модели** — неизвестные поля ответа сохраняются (устойчивость к изменениям схемы Boosty).
 - 🏷️ **Честные метки статуса** — у каждого метода JSDoc `@verified` / `@experimental` / `@unverified`.
 
@@ -264,25 +284,44 @@ bun run typecheck    # tsc --noEmit
 
 ### Авторизация
 
-Публичные эндпоинты работают анонимно. Для приватного контента и аккаунт-операций нужен токен в
-`auth.json` (исключён из git через `.gitignore`):
+Публичные эндпоинты работают анонимно. Для своего контента и операций с аккаунтом войдите один раз:
 
 ```bash
-cp auth.json.example auth.json   # заполнить вручную, либо:
-bun run login                    # интерактивный вход через браузер (Puppeteer)
+npx boosty-api login            # откроет окно браузера; нужен `npm i boosty-api puppeteer`
+npx boosty-api login --cookie   # или вставьте заголовок Cookie любого запроса к boosty.to
 ```
 
-Вручную: войти на boosty.to → DevTools → Application → Cookies. Cookie `auth` — это URL-encoded JSON,
-cookie `_clientId` — это device id. `auth.json` использует **snake_case**, cookie — camelCase, сопоставь:
+Оба способа сохраняют сессию в `auth.json`, `new API()` её подхватывает. В git файл не коммитить: на Linux и
+macOS он доступен только владельцу, на Windows наследует права папки.
 
-| cookie `auth` | поле `auth.json` |
-|---|---|
-| `accessToken` | `access_token` |
-| `refreshToken` | `refresh_token` |
-| `expiresAt` | `expires_at` |
-| `_clientId` (cookie) | `device_id` |
+Где взять заголовок Cookie: войдите на boosty.to в приватном окне, откройте DevTools → Network, выберите любой
+запрос к boosty.to и скопируйте значение `cookie` в Request Headers. Потом закройте окно, не выходя из
+аккаунта: открытый браузер обновляет те же токены, а Boosty оставляет в живых только последние.
 
-Для refresh **обязателен непустой `device_id`**.
+То же из кода:
+
+```ts
+import { API, Auth, interactiveLogin } from "boosty-api";
+
+const api = new API({ auth: Auth.fromCookies(process.env.BOOSTY_COOKIE!) }); // заголовок Cookie
+const viaBrowser = new API({ auth: await interactiveLogin() });         // сохранится в auth.json
+```
+
+**На сервере** храните токены вместе с остальными секретами и сохраняйте каждое обновление: Boosty меняет
+refresh-токен при каждом refresh, старый перестаёт работать.
+
+```ts
+const auth = Auth.fromTokens(
+  { accessToken, refreshToken, deviceId },                // deviceId — это cookie `_clientId`
+  { onRefresh: (tokens) => db.saveBoostyTokens(tokens) }, // ожидается; если бросит — запрос упадёт с TokenPersistError
+);
+const api = new API({ auth });
+```
+
+Токены обновляются до истечения и после 401, параллельные запросы делят одно обновление. Пока новый набор
+не сохранён, запросы падают с `TokenPersistError`, а сохранение повторяется перед каждым из них. Без
+`onRefresh` обновлённые токены живут только в памяти, об этом будет предупреждение. `auth.tokens` в любой
+момент отдаёт текущий набор.
 
 ### Легенда статусов API
 
@@ -393,7 +432,8 @@ src/
   index.ts        публичная точка входа (barrel-экспорт)
   client.ts       ядро API: request() + сборка ресурсов + легаси-алиасы
   http.ts         HTTPClient (нативный fetch), RequestOptions, ApiCore, BaseResource, BoostyError
-  auth/           Auth, AuthData, FileAuthDataResolver
+  auth/           Auth, AuthData, File- и MemoryAuthDataResolver
+  cli.ts, cli/    команда `boosty-api login`
   resources/      posts, comments, blog, user, media, social, feed, messaging, income
   types/          модели (наследуют BaseObject; поля через `declare`)
   utils/          logging, post (renderText), video (getVideoSizes), browser_login (Puppeteer), message (textBlock, linkBlock, buildMessage), consts
