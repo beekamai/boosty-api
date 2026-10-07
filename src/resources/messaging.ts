@@ -63,13 +63,44 @@ export class MessagingResource extends BaseResource {
     }
 
     /**
-     * User notifications.
-     * @unverified Path not found among the usual ones (/v1/notification/, /v1/notifications/,
-     *   /v1/notification/feed/ → 404). Web client traffic capture is required for the exact path.
+     * The current user's notification feed (the bell in the web client). Takes no paging parameters.
+     * @verified GET /v1/notification/standalone/event/ (confirmed by a live 200 response).
      */
-    async notifications(options: { limit?: number; offset?: string } = {}): Promise<NotificationsResponse> {
-        const json = await this.core.request("GET", `/v1/notification/`, {
-            params: { limit: options.limit, offset: options.offset },
+    async notifications(): Promise<NotificationsResponse> {
+        const json = await this.core.request("GET", `/v1/notification/standalone/event/`);
+        return new NotificationsResponse(json);
+    }
+
+    /**
+     * Mark notifications as read. Returns the feed with updated counters.
+     * @experimental PUT /v1/notification/standalone/read/, form `event_id=1,2` — taken from the web client.
+     */
+    async markNotificationsRead(eventIds: number[]): Promise<NotificationsResponse> {
+        if (eventIds.length === 0) return this.notifications();
+        const json = await this.core.request("PUT", `/v1/notification/standalone/read/`, {
+            form: { event_id: eventIds.join(",") },
+        });
+        return new NotificationsResponse(json);
+    }
+
+    /**
+     * Delete one notification.
+     * @experimental DELETE /v1/notification/standalone/event/{eventId} — taken from the web client.
+     */
+    async deleteNotification(eventId: number): Promise<true> {
+        await this.core.request("DELETE", apiPath`/v1/notification/standalone/event/${eventId}`);
+        return true;
+    }
+
+    /**
+     * Delete several notifications at once. An empty list sends nothing: what the server does with an empty
+     * `event_id` is unknown, and the web client never sends one.
+     * @experimental DELETE /v1/notification/standalone/event/, form `event_id=1,2` — taken from the web client.
+     */
+    async deleteNotifications(eventIds: number[]): Promise<NotificationsResponse> {
+        if (eventIds.length === 0) return this.notifications();
+        const json = await this.core.request("DELETE", `/v1/notification/standalone/event/`, {
+            form: { event_id: eventIds.join(",") },
         });
         return new NotificationsResponse(json);
     }

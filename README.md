@@ -93,7 +93,7 @@ A **non-empty `device_id` is required** for token refresh.
 | `media` | `list` (media_album; `type`: `all` `image` `video` `audio`) | ✅ |
 | `social` | `likePost` `unlikePost` `voteOption` `removeVote` | 🟡 |
 | `feed` | `posts` `searchBlogs` | ✅ |
-| `messaging` | `dialogs` `dialogWithUser` `createDialog` `messages` `sendMessage` `notifications` | ✅ / ❔ notifications |
+| `messaging` | `dialogs` `dialogWithUser` `createDialog` `messages` `sendMessage` `notifications` `markNotificationsRead` `deleteNotification(s)` | ✅ / 🟡 notification writes |
 | `income` | `sales` (POST form; may be "Category disabled" per account) | ⚠️ |
 
 Legacy aliases `api.getPost`, `api.getPostComments`, `api.request` are kept for compatibility.
@@ -299,7 +299,7 @@ cookie `_clientId` — это device id. `auth.json` использует **snak
 | `media` | `list` (media_album; `type`: `all` `image` `video` `audio`) | ✅ |
 | `social` | `likePost` `unlikePost` `voteOption` `removeVote` | 🟡 |
 | `feed` | `posts` `searchBlogs` | ✅ |
-| `messaging` | `dialogs` `dialogWithUser` `createDialog` `messages` `sendMessage` `notifications` | ✅ / ❔ notifications |
+| `messaging` | `dialogs` `dialogWithUser` `createDialog` `messages` `sendMessage` `notifications` `markNotificationsRead` `deleteNotification(s)` | ✅ / 🟡 запись уведомлений |
 | `income` | `sales` (POST form; может быть «Category disabled» у аккаунта) | ⚠️ |
 
 Легаси-алиасы `api.getPost`, `api.getPostComments`, `api.request` сохранены для совместимости.
