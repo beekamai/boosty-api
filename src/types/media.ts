@@ -47,7 +47,7 @@ export class MediaPost extends BaseObject {
 
 export class MediaPostsResponse extends BaseObject {
     declare data: MediaPost[];
-    declare extra: { isLast: boolean; offset: string };
+    declare extra?: { isLast?: boolean; offset?: string };
 
     constructor(data: Record<string, any> = {}) {
         super(data);

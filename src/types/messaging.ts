@@ -1,5 +1,8 @@
 import { BaseObject } from "./base";
 import { BaseUser } from "./users";
+import type { ContentItem } from "./content";
+import type { Currency } from "./subscription";
+import type { TeaserContent } from "./teaser";
 
 /** Conversation partner (the real Boosty response field is `chatmate`, not `user`). */
 export class Chatmate extends BaseUser {
@@ -43,25 +46,44 @@ export class DonationInfo extends BaseObject {
     declare user?: BaseUser & { email?: string };
 }
 
+/** Attachment counters of a message, by kind. */
+export interface MessageAttachments {
+    audios?: { count: number };
+    files?: { count: number };
+    images?: { count: number; previewUrl?: string };
+    text?: { count: number };
+    videos?: { count: number; previewUrl?: string };
+}
+
 /** Message in a conversation. */
 export class Message extends BaseObject {
     declare id: number;
     declare dialogId?: number;
-    declare createdAt?: number | string;
+    /** Unix time, seconds. */
+    declare createdAt?: number;
     declare authorId?: number;
     declare author?: BaseUser;
-    declare data?: any[];
+    declare data?: ContentItem[];
+    declare attachments?: MessageAttachments;
     declare isRead?: boolean;
     declare isDeleted?: boolean;
     declare isPaid?: boolean;
+    declare isFeePaid?: boolean;
     declare price?: number;
+    declare currencyPrices?: Currency;
+    /** True while a paid message is locked for the reader. */
+    declare payWall?: boolean;
+    declare previewType?: string;
+    declare teaser?: TeaserContent[];
     /** Present if the message is a donation. */
     declare donation?: DonationInfo;
 }
 
 export class MessagesResponseExtra extends BaseObject {
     declare isLast?: boolean;
-    declare offset?: string;
+    /** Only in the messages embedded in `DialogWithUser`. */
+    declare isFirst?: boolean;
+    declare offset?: number;
 }
 
 export class MessagesResponse extends BaseObject {
@@ -109,16 +131,22 @@ export class DialogWithUser extends BaseObject {
     declare id?: number;
     declare relation?: DialogRelation;
     declare chatmate?: Chatmate;
-    /** Recent messages — returned only for an existing conversation. */
-    declare messages?: Message[];
+    /** Recent messages, paged like `messaging.messages` — returned only for an existing conversation. */
+    declare messages?: MessagesResponse;
     declare unreadMsgCount?: number;
     declare createdAt?: number;
+    declare signedQuery?: string;
+    /** Centrifugo channel for live updates. */
+    declare wsChannel?: string;
 
     constructor(data: Record<string, any> = {}) {
         super(data);
         if (data.chatmate) this.chatmate = new Chatmate(data.chatmate);
         if (data.relation) this.relation = new DialogRelation(data.relation);
-        if (Array.isArray(data.messages)) this.messages = data.messages.map((m: any) => new Message(m));
+        // The API sends { data: [...], extra }, not a bare array
+        if (data.messages && typeof data.messages === "object") {
+            this.messages = new MessagesResponse(Array.isArray(data.messages) ? { data: data.messages } : data.messages);
+        }
     }
 }
 

@@ -26,7 +26,19 @@ export class BlogProfile extends BaseObject {
 }
 
 /** Blog search result (GET /v1/search/blog/). */
-export interface SearchBlogsResponse {
-    data: { searchBlogs: { rank: number; blog: BlogProfile }[] };
-    extra: { offset: string; isLast: boolean };
+export class SearchBlogsResponse extends BaseObject {
+    declare data: { searchBlogs: { rank: number; blog: BlogProfile }[] };
+    declare extra?: { offset?: string; isLast?: boolean };
+
+    constructor(data: Record<string, any> | null = {}) {
+        super(data ?? {});
+        const inner = data?.data && typeof data.data === "object" ? data.data : {};
+        const results = inner.searchBlogs;
+        this.data = {
+            ...inner,
+            searchBlogs: (Array.isArray(results) ? results : [])
+                .filter((r: any) => r && typeof r === "object")
+                .map((r: any) => (r.blog && typeof r.blog === "object" ? { ...r, blog: new BlogProfile(r.blog) } : r)),
+        };
+    }
 }
