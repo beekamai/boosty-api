@@ -1,5 +1,5 @@
 /* resources/media.ts — blog media feed (photo/video/audio). */
-import { BaseResource } from "../http";
+import { BaseResource, apiPath } from "../http";
 import { MediaPostsResponse } from "../types/media";
 
 /**
@@ -19,7 +19,7 @@ export class MediaResource extends BaseResource {
         blogName: string,
         options: { type?: MediaType; limit?: number; offset?: string } = {}
     ): Promise<MediaPostsResponse> {
-        const json = await this.core.request("GET", `/v1/blog/${blogName}/media_album/`, {
+        const json = await this.core.request("GET", apiPath`/v1/blog/${blogName}/media_album/`, {
             params: {
                 type: options.type ?? "all",
                 limit_by: "media",

@@ -1,5 +1,5 @@
 /* resources/comments.ts — comments and replies. */
-import { BaseResource } from "../http";
+import { BaseResource, apiPath } from "../http";
 import { Comment, CommentsResponse, RepliesResponse } from "../types/comment";
 
 export interface ListCommentsOptions {
@@ -16,7 +16,7 @@ export class CommentsResource extends BaseResource {
      * @verified GET /v1/blog/{blog}/post/{postId}/comment/
      */
     async list(blogName: string, postId: string, options: ListCommentsOptions = {}): Promise<CommentsResponse> {
-        const json = await this.core.request("GET", `/v1/blog/${blogName}/post/${postId}/comment/`, {
+        const json = await this.core.request("GET", apiPath`/v1/blog/${blogName}/post/${postId}/comment/`, {
             params: {
                 offset: options.offset,
                 limit: options.limit,
@@ -41,7 +41,7 @@ export class CommentsResource extends BaseResource {
     ): Promise<RepliesResponse> {
         const json = await this.core.request(
             "GET",
-            `/v1/blog/${blogName}/post/${postId}/comment/`,
+            apiPath`/v1/blog/${blogName}/post/${postId}/comment/`,
             { params: { parent_id: parentIntId, offset: options.offset, limit: options.limit, order: options.order } }
         );
         return new RepliesResponse(json);
@@ -58,7 +58,7 @@ export class CommentsResource extends BaseResource {
         data: unknown[],
         options: { replyToId?: number; replyId?: number } = {}
     ): Promise<Comment> {
-        const json = await this.core.request("POST", `/v1/blog/${blogName}/post/${postId}/comment/`, {
+        const json = await this.core.request("POST", apiPath`/v1/blog/${blogName}/post/${postId}/comment/`, {
             form: {
                 data: JSON.stringify(data),
                 reply_to_id: options.replyToId,
@@ -73,7 +73,7 @@ export class CommentsResource extends BaseResource {
      * @experimental PUT /v1/blog/{blog}/post/{postId}/comment/{commentId}/like
      */
     async like(blogName: string, postId: string, commentId: number | string): Promise<unknown> {
-        return this.core.request("PUT", `/v1/blog/${blogName}/post/${postId}/comment/${commentId}/like`);
+        return this.core.request("PUT", apiPath`/v1/blog/${blogName}/post/${postId}/comment/${commentId}/like`);
     }
 
     /**
@@ -81,7 +81,7 @@ export class CommentsResource extends BaseResource {
      * @experimental DELETE /v1/blog/{blog}/post/{postId}/comment/{commentId}/like
      */
     async unlike(blogName: string, postId: string, commentId: number | string): Promise<true> {
-        await this.core.request("DELETE", `/v1/blog/${blogName}/post/${postId}/comment/${commentId}/like`);
+        await this.core.request("DELETE", apiPath`/v1/blog/${blogName}/post/${postId}/comment/${commentId}/like`);
         return true;
     }
 }

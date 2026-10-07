@@ -1,6 +1,6 @@
 /* resources/messaging.ts — dialogs, messages, notifications. */
 /* The whole module is @experimental: paths reconstructed from the web client, need verification on traffic. */
-import { BaseResource } from "../http";
+import { BaseResource, apiPath } from "../http";
 import { Dialog, DialogsResponse, DialogWithUser, MessagesResponse } from "../types/messaging";
 import { NotificationsResponse } from "../types/notification";
 
@@ -45,7 +45,7 @@ export class MessagingResource extends BaseResource {
         dialogId: number | string,
         options: { limit?: number; offset?: string } = {}
     ): Promise<MessagesResponse> {
-        const json = await this.core.request("GET", `/v1/dialog/${dialogId}/message/`, {
+        const json = await this.core.request("GET", apiPath`/v1/dialog/${dialogId}/message/`, {
             params: { limit: options.limit, offset: options.offset },
         });
         return new MessagesResponse(json);
@@ -57,7 +57,7 @@ export class MessagingResource extends BaseResource {
      *   form-urlencoded body: data = JSON of an array of blocks (text/link/...). Confirmed by a live 200.
      */
     async sendMessage(dialogId: number | string, data: unknown[]): Promise<unknown> {
-        return this.core.request("POST", `/v1/dialog/${dialogId}/message`, {
+        return this.core.request("POST", apiPath`/v1/dialog/${dialogId}/message`, {
             form: { data: JSON.stringify(data) },
         });
     }
