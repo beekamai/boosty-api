@@ -1,11 +1,15 @@
 /* Публичная точка входа библиотеки boosty-api. */
 export { API } from "./client";
+export type { APIOptions } from "./client";
 export { BoostyError, apiPath } from "./http";
 export type { HTTPClient, RequestOptions, ApiCore } from "./http";
 
-export { Auth } from "./auth/auth";
+export { Auth, TokenPersistError } from "./auth/auth";
+export type { AuthOptions } from "./auth/auth";
 export { AuthData, ABCAuthDataResolver } from "./auth/auth-data";
+export type { AuthTokens, AuthCookies } from "./auth/auth-data";
 export { FileAuthDataResolver } from "./auth/file-auth-data-resolver";
+export { MemoryAuthDataResolver } from "./auth/memory-auth-data-resolver";
 
 /* Модели и типы. content.ts реэкспортит контент-типы из media-types,
    поэтому media-types напрямую не экспортируем (во избежание дублей). */
@@ -34,5 +38,6 @@ export { renderText } from "./utils/post";
 export type { Entity } from "./utils/post";
 export { getVideoSizes } from "./utils/video";
 export { interactiveLogin } from "./utils/browser_login";
+export type { InteractiveLoginOptions } from "./utils/browser_login";
 export { textBlock, linkBlock, buildMessage } from "./utils/message";
 export type { ContentBlock } from "./utils/message";

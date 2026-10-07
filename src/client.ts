@@ -1,7 +1,7 @@
 /* client.ts — transport core + assembly of resource namespaces. */
 import { logger } from "./utils/logging";
 import { API_URL } from "./utils/consts";
-import { Auth } from "./auth/auth";
+import { Auth, TokenPersistError } from "./auth/auth";
 import {
     BoostyError,
     defaultHttpClient,
@@ -30,6 +30,11 @@ function stripNullish(obj: Record<string, unknown>): Record<string, unknown> {
     return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== null && v !== undefined));
 }
 
+export interface APIOptions {
+    auth?: Auth;
+    httpClient?: HTTPClient;
+}
+
 export class API implements ApiCore {
     private httpClient: HTTPClient;
     public auth: Auth;
@@ -45,9 +50,20 @@ export class API implements ApiCore {
     public readonly messaging: MessagingResource;
     public readonly income: IncomeResource;
 
-    constructor(httpClient: HTTPClient = defaultHttpClient, auth?: Auth) {
-        this.httpClient = httpClient;
-        this.auth = auth ?? new Auth();
+    /**
+     * `new API()` reads `./auth.json` (anonymous if there is none); `new API({ auth })` takes an `Auth`
+     * from `Auth.fromCookies`, `Auth.fromTokens` or `interactiveLogin`. The positional form
+     * `new API(httpClient, auth)` still works.
+     */
+    constructor(options?: APIOptions);
+    constructor(httpClient?: HTTPClient, auth?: Auth);
+    constructor(first?: HTTPClient | APIOptions, auth?: Auth) {
+        const options: APIOptions =
+            typeof (first as HTTPClient | undefined)?.request === "function"
+                ? { httpClient: first as HTTPClient, auth }
+                : { ...(first as APIOptions | undefined), ...(auth ? { auth } : {}) };
+        this.httpClient = options.httpClient ?? defaultHttpClient;
+        this.auth = options.auth ?? new Auth();
 
         this.posts = new PostsResource(this);
         this.comments = new CommentsResource(this);
@@ -71,10 +87,14 @@ export class API implements ApiCore {
         const { params, json, form, anon = false, _retried = false } = options;
 
         /* Proactive refresh before the request if the token has expired (authorized only). */
-        if (!anon && !_retried) {
+        if (!anon && _retried) {
+            await this.auth.ensureSaved();
+        } else if (!anon) {
             try {
                 await this.auth.ensureFresh(this.httpClient, API_URL);
             } catch (e) {
+                // Losing a rotated refresh token silently would kill the session on restart: surface it
+                if (e instanceof TokenPersistError) throw e;
                 logger.warn(`Proactive refresh failed, continuing with the current token: ${String(e)}`);
             }
         }
@@ -107,9 +127,13 @@ export class API implements ApiCore {
         logger.info(`${method} ${url.toString()}`);
         const response = await this.httpClient.request(url.toString(), init);
 
-        if (response.status === 401 && !anon && !_retried) {
-            logger.warn("Token expired (401), refreshing via refresh_token and retrying...");
-            await this.auth.refreshAuthData(this.httpClient, API_URL);
+        // An anonymous client has nothing to refresh: its 401 is a plain BoostyError below
+        if (response.status === 401 && !anon && !_retried && this.auth.isAuthenticated) {
+            // Sent with a token another request has already replaced: retry, a second refresh would spend a rotated token
+            if (this.auth.headers["Authorization"] === headers["Authorization"]) {
+                logger.warn("Token expired (401), refreshing via refresh_token and retrying...");
+                await this.auth.refreshAuthData(this.httpClient, API_URL);
+            }
             return this.request<T>(method, path, { ...options, _retried: true });
         }
 
