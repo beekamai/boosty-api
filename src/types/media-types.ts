@@ -61,10 +61,10 @@ export class Smile extends BaseObject {
     declare isAnimated: boolean;
 }
 
-/** Item of a list block: its own content blocks plus nested items. */
+/** Item of a list block: its own content blocks plus nested items. Either may be missing. */
 export interface ListItem {
-    data: ContentItem[];
-    items: ListItem[];
+    data?: ContentItem[];
+    items?: ListItem[];
 }
 
 export class ListContent extends BaseObject {
