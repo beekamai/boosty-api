@@ -1,13 +1,13 @@
 /* src/types/content.ts */
 import { BaseObject } from "./base";
-import { Text, Link, LinkToVideo, Smile, FileContent, Audio, Image, Video } from "./media-types";
 
 /**
- * Any content block of a post. The discriminator is the `type` field:
- * text | link | video(LinkToVideo) | smile | file | audio_file | ok_video(Video) | image
+ * Loosely typed content block: only the `type` discriminator. Used where blocks are built by the caller.
+ * Blocks read from the API are typed as `ContentItem`.
  */
 export class Content extends BaseObject {
     declare type: string;
 }
 
-export { Text, Link, LinkToVideo, Smile, FileContent, Audio, Image, Video };
+export { Text, Header, Link, LinkToVideo, Smile, FileContent, ListContent, Audio, Image, Video } from "./media-types";
+export type { ContentItem, ListItem } from "./media-types";

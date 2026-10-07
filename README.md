@@ -84,10 +84,10 @@ A **non-empty `device_id` is required** for token refresh.
 | Namespace | Methods (selected) | Status |
 |---|---|---|
 | `posts` | `list` `get` `create` `update` `delete` `getDeferredAccess` `updateDeferredAccess` | ✅ reads / 🟡 writes |
-| `comments` | `list` `replies` `create` `like` `unlike` | ✅ list / 🟡 rest |
+| `comments` | `list` `replies` (by the parent's `intId`) `create` `like` `unlike` | ✅ list, replies / 🟡 rest |
 | `blog` | `profile` `subscribers` `subscriptionLevels` `blacklist` | ✅ |
 | `user` | `current` | ✅ |
-| `media` | `list` (media_album, `type`+`limit_by=media`) | ✅ |
+| `media` | `list` (media_album; `type`: `all` `image` `video` `audio`) | ✅ |
 | `social` | `likePost` `unlikePost` `voteOption` `removeVote` | 🟡 |
 | `feed` | `posts` `searchBlogs` | ✅ |
 | `messaging` | `dialogs` `dialogWithUser` `createDialog` `messages` `sendMessage` `notifications` | ✅ / ❔ notifications |
@@ -97,16 +97,20 @@ Legacy aliases `api.getPost`, `api.getPostComments`, `api.request` are kept for 
 
 ### Recipes
 
-**Pagination** — list endpoints return `extra.offset`; loop until it is empty:
+**Pagination** — post lists return `extra.offset` and `extra.isLast`; pass the offset back until `isLast`:
 
 ```ts
 let offset: string | undefined;
-do {
+let isLast = false;
+while (!isLast) {
   const page = await api.posts.list("boosty", { limit: 20, offset });
   for (const post of page.data ?? []) console.log(post.title);
   offset = page.extra?.offset;
-} while (offset);
+  isLast = page.extra?.isLast ?? true;
+}
 ```
+
+Other lists page differently: subscribers return `offset` / `total` at the top level, dialogs in `extra`.
 
 **Send a message** — build content blocks with `buildMessage`:
 
@@ -128,6 +132,18 @@ if (!probe.relation?.canWrite) throw new Error("this user cannot be messaged fir
 const dialogId = probe.id ?? (await api.messaging.createDialog(userId)).id;
 await api.messaging.sendMessage(dialogId, buildMessage(["Here is your link:", { link: url }]));
 ```
+
+**Render post text** — `post.text` (or `renderText(blocks)` for comments and blog descriptions) gives plain
+text plus Telegram-style entities:
+
+```ts
+const [text, entities] = post.text;
+// entities: { type: "text_link" | "bold" | "italic" | "underline", offset, length, url? }, offsets in UTF-16 units
+```
+
+Paragraphs are separated by newlines, headings and list items (`- ` / `1. `) are rendered as text, media
+blocks become the placeholder (`"\n\n"` by default). Malformed blocks are skipped. The `url` of a `text_link`
+is passed through as the author wrote it, `javascript:` included: check the scheme before putting it into HTML.
 
 **Handle errors** — failed requests throw `BoostyError` with status code and body:
 
@@ -160,7 +176,7 @@ src/
   auth/           Auth, AuthData, FileAuthDataResolver
   resources/      posts, comments, blog, user, media, social, feed, messaging, income
   types/          models (extend BaseObject; fields use `declare`)
-  utils/          logging, post (renderText), video (getVideoSizes), browser_login (Puppeteer), consts
+  utils/          logging, post (renderText), video (getVideoSizes), browser_login (Puppeteer), message (textBlock, linkBlock, buildMessage), consts
 examples/         demo.ts, login.ts
 test/             bun:test suites
 ```
@@ -263,10 +279,10 @@ cookie `_clientId` — это device id. `auth.json` использует **snak
 | Неймспейс | Методы (выборочно) | Статус |
 |---|---|---|
 | `posts` | `list` `get` `create` `update` `delete` `getDeferredAccess` `updateDeferredAccess` | ✅ чтение / 🟡 запись |
-| `comments` | `list` `replies` `create` `like` `unlike` | ✅ list / 🟡 остальное |
+| `comments` | `list` `replies` (по `intId` родителя) `create` `like` `unlike` | ✅ list, replies / 🟡 остальное |
 | `blog` | `profile` `subscribers` `subscriptionLevels` `blacklist` | ✅ |
 | `user` | `current` | ✅ |
-| `media` | `list` (media_album, `type`+`limit_by=media`) | ✅ |
+| `media` | `list` (media_album; `type`: `all` `image` `video` `audio`) | ✅ |
 | `social` | `likePost` `unlikePost` `voteOption` `removeVote` | 🟡 |
 | `feed` | `posts` `searchBlogs` | ✅ |
 | `messaging` | `dialogs` `dialogWithUser` `createDialog` `messages` `sendMessage` `notifications` | ✅ / ❔ notifications |
@@ -276,16 +292,20 @@ cookie `_clientId` — это device id. `auth.json` использует **snak
 
 ### Рецепты
 
-**Пагинация** — list-методы возвращают `extra.offset`; крутим, пока он не пуст:
+**Пагинация** — списки постов возвращают `extra.offset` и `extra.isLast`; передаём offset обратно, пока не `isLast`:
 
 ```ts
 let offset: string | undefined;
-do {
+let isLast = false;
+while (!isLast) {
   const page = await api.posts.list("boosty", { limit: 20, offset });
   for (const post of page.data ?? []) console.log(post.title);
   offset = page.extra?.offset;
-} while (offset);
+  isLast = page.extra?.isLast ?? true;
+}
 ```
+
+Другие списки листаются иначе: у подписчиков `offset` / `total` лежат на верхнем уровне, у диалогов — в `extra`.
 
 **Отправка сообщения** — собираем блоки контента через `buildMessage`:
 
@@ -295,6 +315,30 @@ import { API, buildMessage } from "boosty-api";
 const blocks = buildMessage(["Привет! Вот твоя ссылка:", { link: "https://example.com/sub" }]);
 await api.messaging.sendMessage(dialogId, blocks);
 ```
+
+**Первое сообщение подписчику** — при подписке Boosty не открывает диалог, писать некуда. Проверяем
+отношения, создаём диалог и только потом отправляем. Всегда смотрите `canWrite`: у подписчика могут быть
+закрыты личные сообщения или открыты только за донат, и отправка будет отклонена.
+
+```ts
+const probe = await api.messaging.dialogWithUser(userId);
+if (!probe.relation?.canWrite) throw new Error("этому пользователю нельзя написать первым");
+
+const dialogId = probe.id ?? (await api.messaging.createDialog(userId)).id;
+await api.messaging.sendMessage(dialogId, buildMessage(["Ваша ссылка:", { link: url }]));
+```
+
+**Текст поста** — `post.text` (или `renderText(blocks)` для комментариев и описания блога) отдаёт обычный
+текст и сущности в стиле Telegram:
+
+```ts
+const [text, entities] = post.text;
+// entities: { type: "text_link" | "bold" | "italic" | "underline", offset, length, url? }, смещения в UTF-16
+```
+
+Абзацы разделены переводом строки, заголовки и пункты списков (`- ` / `1. `) выводятся текстом, медиа-блоки
+заменяются плейсхолдером (по умолчанию `"\n\n"`). Битые блоки пропускаются. `url` у `text_link` отдаётся
+как его написал автор, включая `javascript:`: проверяйте схему, прежде чем вставлять в HTML.
 
 **Обработка ошибок** — неуспешные запросы бросают `BoostyError` со статусом и телом:
 
@@ -328,7 +372,7 @@ src/
   auth/           Auth, AuthData, FileAuthDataResolver
   resources/      posts, comments, blog, user, media, social, feed, messaging, income
   types/          модели (наследуют BaseObject; поля через `declare`)
-  utils/          logging, post (renderText), video (getVideoSizes), browser_login (Puppeteer), consts
+  utils/          logging, post (renderText), video (getVideoSizes), browser_login (Puppeteer), message (textBlock, linkBlock, buildMessage), consts
 examples/         demo.ts, login.ts
 test/             bun:test suites
 ```

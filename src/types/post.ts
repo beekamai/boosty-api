@@ -1,10 +1,10 @@
 import { BaseObject } from "./base";
 import { BlogUser } from "./users";
-import { Content } from "./content"; // Import Content from content.ts, which now uses Video from media-types
+import { Content, ContentItem } from "./content";
 import { CommentsResponse } from "./comment";
 import { Currency, SubscriptionLevel, Tag } from "./subscription";
 import { Poll } from "./poll";
-import { Reactions } from "./reactions";
+import { ReactionCounter, Reactions } from "./reactions";
 import { DonatorsResponse } from "./donator";
 import { TeaserContent } from "./teaser";
 import { Counter } from "./counters";
@@ -24,18 +24,21 @@ export class React extends BaseObject {
 
 export class Post extends BaseObject {
     declare id?: string;
-    declare createdAt?: string;
-    declare updatedAt?: string;
-    declare publishTime?: string;
+    declare intId?: number;
+    /** Unix time, seconds. */
+    declare createdAt?: number;
+    declare updatedAt?: number;
+    declare publishTime?: number;
     declare isPublished?: boolean;
     declare user?: BlogUser;
     declare title?: string;
-    declare data?: Content[];
+    declare data?: ContentItem[];
     declare contentCounters?: Counter[];
     declare tags?: Tag[];
     declare hasAccess?: boolean;
     declare teaser?: TeaserContent[];
     declare count?: Count;
+    declare reactionCounters?: ReactionCounter[];
     declare comments?: CommentsResponse;
     declare isCommentsDenied?: boolean;
     declare isLiked?: boolean;
@@ -43,7 +46,7 @@ export class Post extends BaseObject {
     declare signedQuery?: string;
     declare subscriptionLevel?: SubscriptionLevel;
     declare poll?: Poll;
-    declare advertiserInfo?: string;
+    declare advertiserInfo?: string | null;
     declare reacted?: React;
     declare isWaitingVideo?: boolean;
     declare currencyPrices?: Currency;

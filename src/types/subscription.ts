@@ -2,8 +2,10 @@ import { BaseObject } from "./base";
 import { TeaserContent } from "./teaser";
 
 export class Currency extends BaseObject {
-    declare USD: number;
     declare RUB: number;
+    /** USD and EUR are absent for blogs without foreign currency conversion. */
+    declare USD?: number;
+    declare EUR?: number;
 }
 
 export class Tag extends BaseObject {
@@ -15,7 +17,8 @@ export class SubscriptionLevel extends BaseObject {
     declare id: number;
     declare price: number;
     declare name?: string;
-    declare createdAt?: string;
+    /** Unix time, seconds. */
+    declare createdAt?: number;
     declare changePrice?: number;
     declare data?: TeaserContent[];
     declare deleted?: boolean;

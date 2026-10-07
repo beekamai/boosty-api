@@ -29,18 +29,20 @@ export class CommentsResource extends BaseResource {
 
     /**
      * List of replies to a comment.
-     * @experimental GET /v1/blog/{blog}/post/{postId}/comment/{commentId}/reply/ — verify on traffic.
+     * @verified GET /v1/blog/{blog}/post/{postId}/comment/?parent_id={parentIntId}
+     *   The comment/{commentId}/reply/ path does not exist (404).
+     * @param parentIntId `intId` of the parent comment. Its uuid `id` responds 400 invalid_param.
      */
     async replies(
         blogName: string,
         postId: string,
-        commentId: number | string,
+        parentIntId: number,
         options: { offset?: string; limit?: number; order?: string } = {}
     ): Promise<RepliesResponse> {
         const json = await this.core.request(
             "GET",
-            `/v1/blog/${blogName}/post/${postId}/comment/${commentId}/reply/`,
-            { params: { offset: options.offset, limit: options.limit, order: options.order } }
+            `/v1/blog/${blogName}/post/${postId}/comment/`,
+            { params: { parent_id: parentIntId, offset: options.offset, limit: options.limit, order: options.order } }
         );
         return new RepliesResponse(json);
     }

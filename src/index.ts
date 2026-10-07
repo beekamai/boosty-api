@@ -18,6 +18,7 @@ export * from "./types/subscription";
 export * from "./types/subscriber";
 export * from "./types/blog";
 export * from "./types/media";
+export type { MediaType } from "./resources/media";
 export * from "./types/messaging";
 export * from "./types/notification";
 export * from "./types/blacklist";

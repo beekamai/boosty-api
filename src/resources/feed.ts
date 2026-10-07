@@ -1,6 +1,7 @@
 /* resources/feed.ts — general feed and search. */
 import { BaseResource } from "../http";
 import { PostsResponse } from "../types/post";
+import { SearchBlogsResponse } from "../types/blog";
 
 export class FeedResource extends BaseResource {
     /**
@@ -30,9 +31,10 @@ export class FeedResource extends BaseResource {
      * @verified GET /v1/search/blog/ — parameters verified on the live API:
      *   `search_query` and `limit` are required (responds 401 anonymously).
      */
-    async searchBlogs(query: string, options: { limit?: number; offset?: string } = {}): Promise<unknown> {
-        return this.core.request("GET", `/v1/search/blog/`, {
+    async searchBlogs(query: string, options: { limit?: number; offset?: string } = {}): Promise<SearchBlogsResponse> {
+        const json = await this.core.request("GET", `/v1/search/blog/`, {
             params: { search_query: query, limit: options.limit ?? 10, offset: options.offset },
         });
+        return new SearchBlogsResponse(json);
     }
 }
