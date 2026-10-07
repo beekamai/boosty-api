@@ -38,4 +38,9 @@ export class CurrentUser extends BaseUser {
     declare blog?: { url: string; [key: string]: any };
     declare locale?: string;
     declare timezone?: number;
+    declare defaultCurrency?: string;
+    /* The API spells one key `candSendPayers` (sic), though the update call takes `can_send_payers`. */
+    declare dialogSettings?: { sendMsgLevelId?: number; canSendAll?: boolean; [key: string]: any };
+    /** Notification switches: `{ newComment: { mail, telegram, standalone, mobile_push } }`. */
+    declare notifications?: Record<string, Record<string, boolean>>;
 }

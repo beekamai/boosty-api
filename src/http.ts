@@ -45,6 +45,8 @@ export interface RequestOptions {
 
 /** Encodes one caller-supplied value as a single path segment. */
 function pathSegment(value: string | number): string {
+    /* Without this check a missing id (e.g. `blogUrl` of an account without a blog) becomes the segment "undefined". */
+    if (value === undefined || value === null) throw new TypeError(`Invalid path segment: ${value}`);
     const segment = String(value);
     /* The URL parser resolves "." / ".." (even as %2e%2e) and "" changes the route, so encoding is not enough. */
     /* "/" and "\" are rejected too: no Boosty id has them, and a server that decodes %2F before routing would split the segment. */
@@ -59,10 +61,15 @@ function pathSegment(value: string | number): string {
  * Tagged template for request paths: every interpolated value becomes exactly one encoded segment,
  * so ids like `a?b=c` or `a#b` cannot steer the request to another endpoint. Use it with `api.request`
  * whenever a path carries a value you did not write yourself.
- * @throws TypeError if an interpolated value is "", ".", "..", contains "/" or "\", or a lone UTF-16 surrogate.
+ * @throws TypeError if an interpolated value is undefined, null, "", ".", "..", contains "/" or "\", or a lone UTF-16 surrogate.
  */
 export function apiPath(strings: TemplateStringsArray, ...values: Array<string | number>): string {
     return strings.reduce((path, literal, i) => path + pathSegment(values[i - 1]!) + literal);
+}
+
+/** Comma-joins a list filter; an empty list is dropped, since `key=` may read as "no filter" instead of "match nothing". */
+export function commaList(values?: readonly (string | number)[]): string | undefined {
+    return values?.length ? values.join(",") : undefined;
 }
 
 /**

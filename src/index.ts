@@ -32,6 +32,16 @@ export * from "./types/poll";
 export * from "./types/reactions";
 export * from "./types/counters";
 export * from "./types/teaser";
+export * from "./types/account";
+export * from "./types/income";
+export * from "./types/stats";
+export * from "./types/search";
+export * from "./types/target";
+export type { SaleType, SalesSortBy, SalesOrder, SalesListOptions } from "./resources/income";
+export type { StatPeriod, StatSourceType, SourceStatOptions, StatEventsOptions, ReportType } from "./resources/stats";
+export type { SearchPageOptions, SearchPostsOptions, SearchFeedPostsOptions, SearchBlogPostsOptions } from "./resources/search";
+export type { TargetsListOptions } from "./resources/targets";
+export type { VoteOptions } from "./resources/social";
 
 /* Утилиты. */
 export { renderText } from "./utils/post";

@@ -1,6 +1,7 @@
 /* resources/comments.ts — comments and replies. */
 import { BaseResource, apiPath } from "../http";
 import { Comment, CommentsResponse, RepliesResponse } from "../types/comment";
+import type { ReactionName } from "../types/reactions";
 
 export interface ListCommentsOptions {
     offset?: string;
@@ -69,19 +70,47 @@ export class CommentsResource extends BaseResource {
     }
 
     /**
-     * Like a comment.
-     * @experimental PUT /v1/blog/{blog}/post/{postId}/comment/{commentId}/like
+     * React to a comment with a reaction (see `ReactionName`).
+     * @experimental POST /v1/blog/{blog}/post/{postId}/comment/{commentId}/reaction — from the web client
+     * @param fromPage optional UI context the web client sends as `from_page`.
+     */
+    async react(
+        blogName: string,
+        postId: string,
+        commentId: number | string,
+        reaction: ReactionName,
+        fromPage?: string
+    ): Promise<unknown> {
+        return this.core.request("POST", apiPath`/v1/blog/${blogName}/post/${postId}/comment/${commentId}/reaction`, {
+            params: { from_page: fromPage },
+            form: { reaction },
+        });
+    }
+
+    /**
+     * Remove your reaction from a comment.
+     * @experimental DELETE /v1/blog/{blog}/post/{postId}/comment/{commentId}/reaction — from the web client
+     */
+    async removeReaction(blogName: string, postId: string, commentId: number | string, fromPage?: string): Promise<true> {
+        await this.core.request("DELETE", apiPath`/v1/blog/${blogName}/post/${postId}/comment/${commentId}/reaction`, {
+            params: { from_page: fromPage },
+        });
+        return true;
+    }
+
+    /**
+     * Like a comment: the "like" reaction (comments have no like endpoint of their own in the web client).
+     * @experimental POST /v1/blog/{blog}/post/{postId}/comment/{commentId}/reaction with reaction=like
      */
     async like(blogName: string, postId: string, commentId: number | string): Promise<unknown> {
-        return this.core.request("PUT", apiPath`/v1/blog/${blogName}/post/${postId}/comment/${commentId}/like`);
+        return this.react(blogName, postId, commentId, "like");
     }
 
     /**
      * Remove a like from a comment.
-     * @experimental DELETE /v1/blog/{blog}/post/{postId}/comment/{commentId}/like
+     * @experimental DELETE /v1/blog/{blog}/post/{postId}/comment/{commentId}/reaction
      */
     async unlike(blogName: string, postId: string, commentId: number | string): Promise<true> {
-        await this.core.request("DELETE", apiPath`/v1/blog/${blogName}/post/${postId}/comment/${commentId}/like`);
-        return true;
+        return this.removeReaction(blogName, postId, commentId);
     }
 }
