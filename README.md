@@ -3,6 +3,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript&logoColor=white)
 ![Bun](https://img.shields.io/badge/Bun-%E2%89%A51.1-000000?logo=bun&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-3da639)
+[![CI](https://github.com/beekamai/boosty-api/actions/workflows/ci.yml/badge.svg)](https://github.com/beekamai/boosty-api/actions/workflows/ci.yml)
 
 🇬🇧 [English](#english) · 🇷🇺 [Русский](#русский)
 
@@ -161,8 +162,20 @@ src/
   types/          models (extend BaseObject; fields use `declare`)
   utils/          logging, post (renderText), video (getVideoSizes), browser_login (Puppeteer), consts
 examples/         demo.ts, login.ts
+test/             bun:test suites
 ```
 </details>
+
+### Contributing
+
+Pull requests are checked by CI before review:
+
+- typecheck, `bun test` and build;
+- the npm package contains only `dist/`, `README.md` and `LICENSE`, and both builds load on Node 18;
+- PR guard: fails on bidi / zero-width characters and on credential files (`auth.json`, `.env`, keys),
+  warns when `package.json`, build config or workflows change.
+
+Same checks locally: `bun install && bun run typecheck && bun test && bun run build`.
 
 ### License
 
@@ -317,8 +330,20 @@ src/
   types/          модели (наследуют BaseObject; поля через `declare`)
   utils/          logging, post (renderText), video (getVideoSizes), browser_login (Puppeteer), consts
 examples/         demo.ts, login.ts
+test/             bun:test suites
 ```
 </details>
+
+### Участие
+
+Pull request'ы проверяются CI до ревью:
+
+- тайпчек, `bun test` и сборка;
+- в npm-пакет попадают только `dist/`, `README.md` и `LICENSE`, обе сборки грузятся на Node 18;
+- PR guard: падает на bidi / zero-width символах и файлах с секретами (`auth.json`, `.env`, ключи),
+  предупреждает, если менялись `package.json`, конфиги сборки или workflow.
+
+Те же проверки локально: `bun install && bun run typecheck && bun test && bun run build`.
 
 ### Лицензия
 
