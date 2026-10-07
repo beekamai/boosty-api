@@ -28,6 +28,9 @@ export class SubscriptionLevel extends BaseObject {
     declare promos?: Record<string, any> | any[];
     declare isHidden?: boolean;
     declare isLimited?: boolean;
+    /** Duplicates isHidden / isArchived / isLimited. */
+    declare flags?: { isHidden?: boolean; isArchived?: boolean; isLimited?: boolean };
+    declare count?: { availableSlots?: number };
 }
 
 export class SubscriptionLevelsResponse extends BaseObject {

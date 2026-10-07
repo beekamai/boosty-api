@@ -1,31 +1,77 @@
-import { writeFileSync, readFileSync } from "fs";
+/* Interactive login: opens a browser at boosty.to, waits for the session cookies, keeps the tokens. */
 import { logger } from "./logging";
 import { LOGIN_URL, DEFAULT_USER_AGENT } from "./consts";
+import { printable } from "./printable";
+import { Auth } from "../auth/auth";
+import { API } from "../client";
+import { AuthData } from "../auth/auth-data";
+import { FileAuthDataResolver } from "../auth/file-auth-data-resolver";
+import { MemoryAuthDataResolver } from "../auth/memory-auth-data-resolver";
 
-interface AuthCookies {
-    accessToken: string;
-    refreshToken: string;
-    expiresAt: string;
+export interface InteractiveLoginOptions {
+    /** Where to keep the tokens; `null` keeps them in memory only. Default `"auth.json"`. */
+    authFile?: string | null;
+    userAgent?: string;
+    /** Log in again even if `authFile` already holds tokens. */
+    force?: boolean;
+    /** How long to wait for the login to finish, ms. Default 10 minutes. */
+    timeoutMs?: number;
 }
 
+/** Positional unless an options object came first: `interactiveLogin(undefined, ua, true)` keeps its force. */
+export function loginOptions(first?: InteractiveLoginOptions | string, userAgent?: string, force?: boolean): InteractiveLoginOptions {
+    return first !== null && typeof first === "object" ? first : { authFile: first, userAgent, force };
+}
+
+const SIGN_IN_BUTTON ='[data-test-id="COMMON_TOPMENU_TOPMENURIGHTUNAUTHORIZED\\:SIGN_IN"]';
+
+/**
+ * Opens a browser window, lets the user log in to Boosty and returns an `Auth` for `new API({ auth })`.
+ * Needs the optional `puppeteer` peer. With `authFile` set and tokens already there, no browser is opened.
+ * The positional form `interactiveLogin(authFile, userAgent, force)` still works.
+ */
+export async function interactiveLogin(options?: InteractiveLoginOptions): Promise<Auth>;
+export async function interactiveLogin(authFile?: string, userAgent?: string, force?: boolean): Promise<Auth>;
 export async function interactiveLogin(
-    authFile: string = "auth.json",
-    userAgent: string = DEFAULT_USER_AGENT,
-    force: boolean = false
-): Promise<void> {
-    // If not a forced login and auth.json exists, skip
-    if (!force) {
+    first?: InteractiveLoginOptions | string,
+    userAgentArg?: string,
+    forceArg?: boolean
+): Promise<Auth> {
+    const options = loginOptions(first, userAgentArg, forceArg);
+    const authFile = options.authFile === undefined ? "auth.json" : options.authFile;
+    const userAgent = options.userAgent ?? DEFAULT_USER_AGENT;
+
+    if (authFile && !options.force) {
         try {
-            const authData = JSON.parse(readFileSync(authFile, "utf-8"));
-            if (authData.access_token && authData.refresh_token) {
-                logger.info("Tokens already present in auth.json, authorization not required.");
-                return;
+            const resolver = new FileAuthDataResolver(authFile);
+            const saved = resolver.loadAuthData();
+            if (saved.access_token && saved.refresh_token) {
+                logger.info(`Tokens already present in ${authFile}, authorization not required.`);
+                return new Auth(resolver);
             }
-        } catch (e) {
-            logger.info("auth.json not found or empty, starting authorization...");
+        } catch {
+            logger.info(`${authFile} is unreadable, starting authorization...`);
         }
     }
 
+    const authData = await loginInBrowser(userAgent, options.timeoutMs ?? 10 * 60_000);
+    let auth: Auth;
+    if (authFile) {
+        const resolver = new FileAuthDataResolver(authFile);
+        resolver.authData = authData;
+        resolver.saveAuthData();
+        logger.info(`Tokens saved to ${authFile}`);
+        auth = new Auth(resolver);
+    } else {
+        auth = new Auth(new MemoryAuthDataResolver(authData));
+    }
+    // Name the account the browser handed over, so a session that is not yours does not go unnoticed
+    const who = await new API({ auth }).user.current().then((user) => printable(user.name ?? ""), () => null);
+    logger.info(who ? `Logged in as ${who}` : "Logged in, but the session could not be checked");
+    return auth;
+}
+
+async function loginInBrowser(userAgent: string, timeoutMs: number): Promise<AuthData> {
     // Puppeteer is an optional dependency — loaded lazily so the package works without it.
     let puppeteer: typeof import("puppeteer").default;
     try {
@@ -36,49 +82,43 @@ export async function interactiveLogin(
         );
     }
 
-    // Launch the browser
-    const browser = await puppeteer.launch({ headless: false }); // headless: false for interactivity
-    const page = await browser.newPage();
+    const browser = await puppeteer.launch({ headless: false });
+    let closed = false;
+    browser.on("disconnected", () => {
+        closed = true;
+    });
+    try {
+        const page = await browser.newPage();
+        // Page-level APIs on purpose: puppeteer is a peer from 23 up, and their replacements appeared later
+        await page.setUserAgent(userAgent);
+        await page.goto(LOGIN_URL, { waitUntil: "networkidle2" });
+        try {
+            await page.waitForSelector(SIGN_IN_BUTTON, { timeout: 15_000 });
+            await page.click(SIGN_IN_BUTTON);
+        } catch {
+            logger.warn("Sign-in button not found: open the login form in the browser window yourself");
+        }
+        logger.info("Please log in to Boosty through the browser window that opened...");
 
-    // Set the User-Agent
-    await page.setUserAgent(userAgent);
-
-    // Navigate to the login page
-    await page.goto(LOGIN_URL, { waitUntil: "networkidle2" });
-
-    // Wait for the sign-in button and click it
-    const signInButtonSelector = '[data-test-id="COMMON_TOPMENU_TOPMENURIGHTUNAUTHORIZED\\:SIGN_IN"]';
-    await page.waitForSelector(signInButtonSelector);
-    await page.click(signInButtonSelector);
-
-    // Wait for the user to log in manually
-    logger.info("Please log in to Boosty through the browser window that opened...");
-    await page.waitForNavigation({ waitUntil: "networkidle2", timeout: 0 }); // 0 = wait indefinitely
-
-    // Extract cookies after login
-    // Page-level APIs on purpose: puppeteer is a peer from 23 up, and their replacements appeared later
-    const cookies = await page.cookies();
-    const authCookie = cookies.find((cookie) => cookie.name === "auth");
-    const clientIdCookie = cookies.find((cookie) => cookie.name === "_clientId");
-
-    if (!authCookie || !clientIdCookie) {
-        throw new Error("Failed to find authorization cookies. Make sure the login completed.");
+        // Wait for the session cookie itself, not a navigation: OAuth logins redirect before the cookie is set
+        const deadline = Date.now() + timeoutMs;
+        while (Date.now() < deadline) {
+            if (closed) throw new Error("The browser window was closed before the login finished");
+            const jar = Object.fromEntries((await page.cookies(LOGIN_URL)).map((c) => [c.name, c.value]));
+            if (jar.auth && jar._clientId) {
+                try {
+                    return AuthData.fromCookies({ auth: jar.auth, _clientId: jar._clientId }, userAgent);
+                } catch {
+                    // The cookie exists but holds no tokens yet: keep waiting
+                }
+            }
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+        throw new Error(`Login did not finish within ${Math.round(timeoutMs / 1000)} s`);
+    } catch (e) {
+        if (closed) throw new Error("The browser window was closed before the login finished");
+        throw e;
+    } finally {
+        if (!closed) await browser.close().catch(() => {});
     }
-
-    // Parse the authorization cookies
-    const authData: AuthCookies = JSON.parse(decodeURIComponent(authCookie.value));
-    const authJson = {
-        access_token: authData.accessToken,
-        refresh_token: authData.refreshToken,
-        expires_at: authData.expiresAt,
-        device_id: clientIdCookie.value,
-        user_agent: userAgent,
-    };
-
-    // Save to auth.json
-    writeFileSync(authFile, JSON.stringify(authJson, null, 2));
-    logger.info(`Tokens successfully saved to ${authFile}`);
-
-    // Close the browser
-    await browser.close();
 }

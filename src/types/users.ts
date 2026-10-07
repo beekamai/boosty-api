@@ -6,6 +6,9 @@ export class BaseUser extends BaseObject {
     declare hasAvatar?: boolean;
     declare avatarUrl?: string;
     declare isVerifiedStreamer?: boolean;
+    declare isOfficial?: boolean;
+    /** The user's currency, for example "RUB". */
+    declare currency?: string;
 }
 
 export class BlogUser extends BaseUser {
