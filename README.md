@@ -84,7 +84,7 @@ A **non-empty `device_id` is required** for token refresh.
 | Namespace | Methods (selected) | Status |
 |---|---|---|
 | `posts` | `list` `get` `create` `update` `delete` `getDeferredAccess` `updateDeferredAccess` | ✅ reads / 🟡 writes |
-| `comments` | `list` `replies` `create` `like` `unlike` | ✅ list, replies / 🟡 rest |
+| `comments` | `list` `replies` (by the parent's `intId`) `create` `like` `unlike` | ✅ list, replies / 🟡 rest |
 | `blog` | `profile` `subscribers` `subscriptionLevels` `blacklist` | ✅ |
 | `user` | `current` | ✅ |
 | `media` | `list` (media_album; `type`: `all` `image` `video` `audio`) | ✅ |
@@ -132,6 +132,18 @@ if (!probe.relation?.canWrite) throw new Error("this user cannot be messaged fir
 const dialogId = probe.id ?? (await api.messaging.createDialog(userId)).id;
 await api.messaging.sendMessage(dialogId, buildMessage(["Here is your link:", { link: url }]));
 ```
+
+**Render post text** — `post.text` (or `renderText(blocks)` for comments and blog descriptions) gives plain
+text plus Telegram-style entities:
+
+```ts
+const [text, entities] = post.text;
+// entities: { type: "text_link" | "bold" | "italic" | "underline", offset, length, url? }, offsets in UTF-16 units
+```
+
+Paragraphs are separated by newlines, headings and list items (`- ` / `1. `) are rendered as text, media
+blocks become the placeholder (`"\n\n"` by default). Malformed blocks are skipped. The `url` of a `text_link`
+is passed through as the author wrote it, `javascript:` included: check the scheme before putting it into HTML.
 
 **Handle errors** — failed requests throw `BoostyError` with status code and body:
 
@@ -267,7 +279,7 @@ cookie `_clientId` — это device id. `auth.json` использует **snak
 | Неймспейс | Методы (выборочно) | Статус |
 |---|---|---|
 | `posts` | `list` `get` `create` `update` `delete` `getDeferredAccess` `updateDeferredAccess` | ✅ чтение / 🟡 запись |
-| `comments` | `list` `replies` `create` `like` `unlike` | ✅ list, replies / 🟡 остальное |
+| `comments` | `list` `replies` (по `intId` родителя) `create` `like` `unlike` | ✅ list, replies / 🟡 остальное |
 | `blog` | `profile` `subscribers` `subscriptionLevels` `blacklist` | ✅ |
 | `user` | `current` | ✅ |
 | `media` | `list` (media_album; `type`: `all` `image` `video` `audio`) | ✅ |
@@ -303,6 +315,30 @@ import { API, buildMessage } from "boosty-api";
 const blocks = buildMessage(["Привет! Вот твоя ссылка:", { link: "https://example.com/sub" }]);
 await api.messaging.sendMessage(dialogId, blocks);
 ```
+
+**Первое сообщение подписчику** — при подписке Boosty не открывает диалог, писать некуда. Проверяем
+отношения, создаём диалог и только потом отправляем. Всегда смотрите `canWrite`: у подписчика могут быть
+закрыты личные сообщения или открыты только за донат, и отправка будет отклонена.
+
+```ts
+const probe = await api.messaging.dialogWithUser(userId);
+if (!probe.relation?.canWrite) throw new Error("этому пользователю нельзя написать первым");
+
+const dialogId = probe.id ?? (await api.messaging.createDialog(userId)).id;
+await api.messaging.sendMessage(dialogId, buildMessage(["Ваша ссылка:", { link: url }]));
+```
+
+**Текст поста** — `post.text` (или `renderText(blocks)` для комментариев и описания блога) отдаёт обычный
+текст и сущности в стиле Telegram:
+
+```ts
+const [text, entities] = post.text;
+// entities: { type: "text_link" | "bold" | "italic" | "underline", offset, length, url? }, смещения в UTF-16
+```
+
+Абзацы разделены переводом строки, заголовки и пункты списков (`- ` / `1. `) выводятся текстом, медиа-блоки
+заменяются плейсхолдером (по умолчанию `"\n\n"`). Битые блоки пропускаются. `url` у `text_link` отдаётся
+как его написал автор, включая `javascript:`: проверяйте схему, прежде чем вставлять в HTML.
 
 **Обработка ошибок** — неуспешные запросы бросают `BoostyError` со статусом и телом:
 
