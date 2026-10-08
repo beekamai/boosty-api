@@ -20,3 +20,8 @@ dist/
 
 # Serena (local assistant cache)
 .serena/
+
+# Output of the example scripts (donations.csv holds payer data)
+donations.csv
+welcome-state.json
+backup-*/
