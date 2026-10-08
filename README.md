@@ -293,6 +293,8 @@ Pull requests are checked by CI before review:
 
 Same checks locally: `bun install && bun run typecheck && bun test && bun run build`.
 
+Every merged pull request is credited by name in the release notes and appears under [Contributors](#contributors).
+
 ### License
 
 MIT.
@@ -588,11 +590,24 @@ Pull request'ы проверяются CI до ревью:
 
 Те же проверки локально: `bun install && bun run typecheck && bun test && bun run build`.
 
+Каждый влитый pull request отмечается по имени в заметках к релизу и попадает в [Contributors](#contributors).
+
 ### Лицензия
 
 MIT.
 
 ---
+
+## Contributors
+
+Everyone who contributed code. Thank you! · Все, кто внёс код в проект. Спасибо!
+
+<a href="https://github.com/beekamai/boosty-api/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=beekamai/boosty-api" alt="Contributors" />
+</a>
+
+What each one did is credited in the [release notes](https://github.com/beekamai/boosty-api/releases). ·
+Кто что сделал — в [заметках к релизам](https://github.com/beekamai/boosty-api/releases).
 
 ## Star history
 
