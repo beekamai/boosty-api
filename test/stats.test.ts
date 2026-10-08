@@ -1,6 +1,6 @@
 /* StatsResource against a fake HTTP client: verb, path, query and response wrapping. */
-import { describe, expect, spyOn, test } from "bun:test";
-import { API, Auth, AuthData, ABCAuthDataResolver, type HTTPClient } from "../src";
+import { describe, expect, test } from "bun:test";
+import { API, Auth, AuthData, ABCAuthDataResolver, configureLogging, type HTTPClient, type Logger } from "../src";
 import { StatsResource } from "../src/resources/stats";
 import { BlogEvent, StatReport } from "../src/types/stats";
 
@@ -24,6 +24,24 @@ function fakeStats(body: unknown) {
 }
 
 const ODD_BODIES = [null, {}, { data: null }, { data: {} }];
+
+/** Captures every log line at debug level; restores the defaults afterwards. */
+async function captureLogs(run: () => Promise<unknown>): Promise<string[]> {
+    const lines: string[] = [];
+    const capture: Logger = {
+        debug: (m) => lines.push(`debug ${m}`),
+        info: (m) => lines.push(`info ${m}`),
+        warn: (m) => lines.push(`warn ${m}`),
+        error: (m) => lines.push(`error ${m}`),
+    };
+    configureLogging({ level: "debug", logger: capture });
+    try {
+        await run();
+    } finally {
+        configureLogging({ level: "default", logger: null });
+    }
+    return lines;
+}
 
 describe("stats paths and queries", () => {
     test("summary", async () => {
@@ -93,15 +111,9 @@ describe("stats paths and queries", () => {
     });
 
     test("the request log names the route but not the query values", async () => {
-        const log = spyOn(console, "log").mockImplementation(() => {});
-        try {
-            await fakeStats({ data: [] }).stats.searchUsers("blog", "alice@example.com");
-            const lines = log.mock.calls.map((args) => args.join(" "));
-            expect(lines.some((l) => l.includes("/v1/blog/stat/blog/search"))).toBe(true);
-            expect(lines.some((l) => l.includes("alice"))).toBe(false);
-        } finally {
-            log.mockRestore();
-        }
+        const lines = await captureLogs(() => fakeStats({ data: [] }).stats.searchUsers("blog", "alice@example.com"));
+        expect(lines.some((l) => l.startsWith("debug GET") && l.includes("/v1/blog/stat/blog/search"))).toBe(true);
+        expect(lines.some((l) => l.includes("alice"))).toBe(false);
     });
 
     test("empty list filters are left out instead of sent as key=", async () => {
@@ -170,16 +182,10 @@ describe("stats review guards", () => {
     test("a non-JSON response is not echoed into the log", async () => {
         const http: HTTPClient = { request: async () => new Response("alice@example.com;100", { status: 200 }) };
         const api = new API(http, new Auth(new MemoryResolver()));
-        const warn = spyOn(console, "warn").mockImplementation(() => {});
-        const log = spyOn(console, "log").mockImplementation(() => {});
-        try {
-            expect(await api.request<string>("GET", "/v1/x")).toBe("alice@example.com;100");
-            const lines = warn.mock.calls.map((args) => args.join(" "));
-            expect(lines.some((l) => l.includes("not JSON"))).toBe(true);
-            expect(lines.some((l) => l.includes("alice"))).toBe(false);
-        } finally {
-            warn.mockRestore();
-            log.mockRestore();
-        }
+        let body: unknown;
+        const lines = await captureLogs(async () => (body = await api.request<string>("GET", "/v1/x")));
+        expect(body).toBe("alice@example.com;100");
+        expect(lines.some((l) => l.startsWith("warn") && l.includes("not JSON"))).toBe(true);
+        expect(lines.some((l) => l.includes("alice"))).toBe(false);
     });
 });

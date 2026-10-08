@@ -202,6 +202,24 @@ Paragraphs are separated by newlines, headings and list items (`- ` / `1. `) are
 blocks become the placeholder (`"\n\n"` by default). Malformed blocks are skipped. The `url` of a `text_link`
 is passed through as the author wrote it, `javascript:` included: check the scheme before putting it into HTML.
 
+Old posts carry two artifacts of the Boosty editor: an emoji in a link split in half, and an auto-detected link
+that swallowed the first word of the next paragraph into its URL. `renderText(post.data, { repair: true })` (or
+`repairBlocks(blocks)`) fixes both on a copy. It is experimental: the rules come from a scan of 859 public posts.
+
+**Logging** — the library is quiet by default: login prompts, warnings and errors go to stderr. Turn on
+request lines while debugging, silence it, or hand the lines to your own logger:
+
+```ts
+import { configureLogging } from "boosty-api";
+
+configureLogging({ level: "debug" });          // + every request: method and path, never query or body
+configureLogging({ level: "silent" });         // nothing at all
+configureLogging({ logger: pino() });          // any object with debug/info/warn/error(message)
+```
+
+The `BOOSTY_API_LOG` environment variable (`debug`, `info`, `warn`, `error`, `silent`) sets the starting level
+without touching code: `BOOSTY_API_LOG=debug bun run examples/income-report.ts`.
+
 **Handle errors** — failed requests throw `BoostyError` with status code and body:
 
 ```ts
@@ -475,6 +493,24 @@ const [text, entities] = post.text;
 Абзацы разделены переводом строки, заголовки и пункты списков (`- ` / `1. `) выводятся текстом, медиа-блоки
 заменяются плейсхолдером (по умолчанию `"\n\n"`). Битые блоки пропускаются. `url` у `text_link` отдаётся
 как его написал автор, включая `javascript:`: проверяйте схему, прежде чем вставлять в HTML.
+
+В старых постах встречаются два артефакта редактора Boosty: разрезанное пополам эмодзи в ссылке и авто-ссылка,
+утащившая в URL первое слово следующего абзаца. `renderText(post.data, { repair: true })` (или
+`repairBlocks(blocks)`) чинит оба на копии блоков. Экспериментально: правила выведены из 859 публичных постов.
+
+**Логи** — по умолчанию библиотека молчит: в stderr идут только подсказки входа, предупреждения и ошибки.
+Запросы можно включить для отладки, логи — выключить совсем или отдать своему логгеру:
+
+```ts
+import { configureLogging } from "boosty-api";
+
+configureLogging({ level: "debug" });          // + каждый запрос: метод и путь, без query и тела
+configureLogging({ level: "silent" });         // ничего
+configureLogging({ logger: pino() });          // любой объект с debug/info/warn/error(message)
+```
+
+Переменная окружения `BOOSTY_API_LOG` (`debug`, `info`, `warn`, `error`, `silent`) задаёт стартовый уровень без
+правки кода: `BOOSTY_API_LOG=debug bun run examples/income-report.ts`.
 
 **Обработка ошибок** — неуспешные запросы бросают `BoostyError` со статусом и телом:
 

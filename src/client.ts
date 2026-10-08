@@ -40,6 +40,7 @@ export interface APIOptions {
 
 export class API implements ApiCore {
     private httpClient: HTTPClient;
+    private warnedAnonymous401 = false;
     public auth: Auth;
 
     /* Resource namespaces (full coverage of the internal API) */
@@ -134,7 +135,7 @@ export class API implements ApiCore {
         }
 
         // Query values can carry personal data (search strings, e-mails): log the route only
-        logger.info(`${method} ${url.origin}${url.pathname}`);
+        logger.debug(`${method} ${url.origin}${url.pathname}`);
         const response = await this.httpClient.request(url.toString(), init);
 
         // An anonymous client has nothing to refresh: its 401 is a plain BoostyError below
@@ -145,6 +146,12 @@ export class API implements ApiCore {
                 await this.auth.refreshAuthData(this.httpClient, API_URL);
             }
             return this.request<T>(method, path, { ...options, _retried: true });
+        }
+
+        // Without auth.json in the working directory the client runs anonymous: say so once instead of a bare 401
+        if (response.status === 401 && !anon && !this.auth.isAuthenticated && !this.warnedAnonymous401) {
+            this.warnedAnonymous401 = true;
+            logger.warn("401 and this client has no token: log in with `npx boosty-api login`, or check the auth file path and its contents");
         }
 
         const body = await this.parseResponse(response);

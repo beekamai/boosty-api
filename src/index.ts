@@ -45,6 +45,8 @@ export type { VoteOptions } from "./resources/social";
 
 /* Утилиты. */
 export { renderText, repairBlocks } from "./utils/post";
+export { configureLogging } from "./utils/logging";
+export type { LogLevel, Logger } from "./utils/logging";
 export type { Entity } from "./utils/post";
 export { getVideoSizes } from "./utils/video";
 export { interactiveLogin } from "./utils/browser_login";
