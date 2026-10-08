@@ -1,8 +1,9 @@
 /* backup-posts.ts — saves every post of a blog you can read as a Markdown file: text, links, image and file URLs. */
+/* Old posts go through the experimental repair of Boosty editor artifacts (split emoji, swallowed link words). */
 /* Run: bun run examples/backup-posts.ts <blog> [outDir=backup-<blog>]. Public posts work without auth.json. */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { API, type Post } from "../src";
+import { API, renderText, type Post } from "../src";
 
 const blog = process.argv[2];
 if (!blog) throw new Error("usage: bun run examples/backup-posts.ts <blog> [outDir]");
@@ -27,7 +28,7 @@ interface Span {
  * boundary the open marks are closed back to the shared outer ones and reopened, so crossing ranges stay valid.
  */
 function toMarkdown(post: Post): string {
-    const [text, entities] = post.text;
+    const [text, entities] = renderText(post.data, { repair: true });
     const spans: Span[] = [];
     for (const e of entities) {
         /* Only http(s) becomes a link, so a javascript: URL cannot turn clickable in a viewer. */

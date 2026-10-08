@@ -35,6 +35,175 @@ function parseContent(content: unknown): [string, Range[]] {
     }
 }
 
+const isInline = (b: unknown): b is Content =>
+    !!b && typeof b === "object" && ["text", "header", "link"].includes((b as Content).type);
+
+/** A paragraph ends at a non-inline block or at an empty BLOCK_END block; non-objects are skipped, as in renderText. */
+const endsParagraph = (block: unknown, text: string): boolean =>
+    !!block && typeof block === "object" && (!isInline(block) || (!text && (block as Content).modificator === "BLOCK_END"));
+
+/** The low half of a surrogate pair that Boosty saved as the six characters "\udXXX". */
+const ESCAPED_LOW = /^\\u(d[c-f][0-9a-f]{2})/i;
+
+/** Copies a block with its prototype; own keys are defined, never assigned, so a "__proto__" key stays plain data. */
+function copyBlock(block: Content): Content {
+    const copy = Object.create(Object.getPrototypeOf(block));
+    for (const key of Object.keys(block)) {
+        Object.defineProperty(copy, key, { value: (block as any)[key], writable: true, enumerable: true, configurable: true });
+    }
+    return copy;
+}
+
+/** Characters removed at original paragraph offset `at`; positions map through all of them in one sorted pass. */
+interface Cut {
+    at: number;
+    removed: number;
+}
+
+function mapper(cuts: Cut[]): (pos: number) => number {
+    const starts = cuts.map((c) => c.at);
+    const before: number[] = [0];
+    for (const c of cuts) before.push(before[before.length - 1] + c.removed);
+    return (pos) => {
+        let lo = 0;
+        let hi = cuts.length;
+        while (lo < hi) {
+            const mid = (lo + hi) >> 1;
+            if (starts[mid] < pos) lo = mid + 1;
+            else hi = mid;
+        }
+        /* Cuts 0..lo-1 start before pos: all but the last are fully before it, the last may contain it. */
+        if (lo === 0) return pos;
+        const last = cuts[lo - 1];
+        return pos - before[lo - 1] - Math.min(pos - last.at, last.removed);
+    };
+}
+
+/**
+ * Repairs two artifacts of the Boosty editor found in real posts, on a copy of the blocks:
+ * - an emoji split between a link and the next block, its second half saved as the literal text "\udXXX":
+ *   the pair is joined back inside the link;
+ * - an auto-detected link that swallowed the next word into its URL (link text ".../privacy_policy/", URL
+ *   ".../privacy_policy/Далее", then a blank block or a paragraph break, then text starting with "Далее"):
+ *   the URL is cut back to the link text. Only links Boosty detected itself (`explicit: false`) are touched.
+ * Linear in the size of the blocks; malformed blocks are left as they are.
+ * @experimental Heuristics drawn from 859 public posts with one case of each; the rules may change.
+ */
+export function repairBlocks(blocks: readonly Content[]): Content[] {
+    const out = blocks.map((b) => (b && typeof b === "object" ? copyBlock(b) : b));
+    /* One parse per block; text follows renderText (String of the first item), edits happen only on string texts. */
+    const parsed = out.map((b) => (isInline(b) ? parseArray(b.content) : null));
+    const textOf = (i: number) => String(parsed[i]?.[0] ?? "");
+    /* Cuts are kept in the original coordinates, so offsets advance by the lengths before any edit. */
+    const lengths = out.map((_, i) => textOf(i).length);
+    const dirty = new Set<number>();
+    /* Paragraph number of every block: a repair that cannot be serialized is undone for its whole paragraph. */
+    const paragraphOf: number[] = [];
+    let paragraphNo = 0;
+
+    let paragraph: number[] = [];
+    let cuts: Cut[] = [];
+    let offset = 0;
+    const closeParagraph = () => {
+        if (cuts.length) {
+            const move = mapper(cuts);
+            for (const j of paragraph) {
+                const ranges = parsed[j]?.[2];
+                if (!Array.isArray(ranges) || !ranges.some(isRange)) continue;
+                parsed[j]![2] = ranges.map((r) => (isRange(r) ? [r[0], move(r[1]), move(r[1] + r[2]) - move(r[1])] : r));
+                dirty.add(j);
+            }
+        }
+        paragraph = [];
+        cuts = [];
+        offset = 0;
+        paragraphNo++;
+    };
+
+    for (let i = 0; i < out.length; i++) {
+        const block = out[i];
+        if (endsParagraph(block, textOf(i))) {
+            closeParagraph();
+            continue;
+        }
+        paragraphOf[i] = paragraphNo;
+        const p = parsed[i];
+        if (!p) continue;
+        paragraph.push(i);
+
+        const next = out[i + 1];
+        const np = parsed[i + 1];
+        const low = np && typeof np[0] === "string" ? ESCAPED_LOW.exec(np[0]) : null;
+        if (block.type === "link" && typeof p[0] === "string" && /[\ud800-\udbff]$/.test(p[0]) && low && next) {
+            p[0] += String.fromCharCode(parseInt(low[1], 16));
+            np![0] = (np![0] as string).slice(6);
+            /* An emptied block with BLOCK_END would read as a paragraph end, which it was not. */
+            if (!np![0] && next.modificator === "BLOCK_END") next.modificator = "";
+            dirty.add(i).add(i + 1);
+            /* The escape began where the next block began: its first character now holds the low half, 5 are gone. */
+            cuts.push({ at: offset + lengths[i] + 1, removed: 5 });
+        }
+
+        const text = textOf(i);
+        if (block.type === "link" && block.explicit === false && typeof block.url === "string" && text) {
+            const tail = block.url.startsWith(text) ? block.url.slice(text.length) : "";
+            if (tail && !/\s/.test(tail) && wordAfterBreak(out, parsed, i + 1, tail)) block.url = text;
+        }
+        offset += lengths[i];
+    }
+    closeParagraph();
+
+    const failed = new Set<number>();
+    for (const i of dirty) {
+        try {
+            out[i].content = JSON.stringify(parsed[i]);
+        } catch {
+            failed.add(paragraphOf[i]);
+        }
+    }
+    /* A block too deep to serialize: its paragraph goes back to the input, a half-applied join would render worse. */
+    if (failed.size) out.forEach((_, i) => failed.has(paragraphOf[i]) && (out[i] = blocks[i]));
+    return out;
+}
+
+/** The content array of an inline block, or null when it does not parse or its text cannot be read (as renderText). */
+function parseArray(content: unknown): unknown[] | null {
+    if (typeof content !== "string" || !content) return null;
+    try {
+        const value = JSON.parse(content);
+        if (!Array.isArray(value)) return null;
+        String(value[0] ?? ""); // throws for objects like {"toString":1}, which renderText reads as empty
+        return value;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * True when the link at `from - 1` is followed by a blank inline block or a paragraph break, and the first
+ * text after that starts with `tail`. A word right next to the link is the author's, not a swallowed one.
+ */
+function wordAfterBreak(blocks: readonly unknown[], parsed: readonly (unknown[] | null)[], from: number, tail: string): boolean {
+    let crossedBlank = false;
+    for (let j = from; j < blocks.length && j < from + 8; j++) {
+        const block = blocks[j];
+        if (!block || typeof block !== "object") continue;
+        if (!isInline(block)) return false;
+        const text = String(parsed[j]?.[0] ?? "");
+        /* An empty block renders nothing, so it is neither a gap nor the word; a paragraph end or spaces are a gap. */
+        if (!text) {
+            if ((block as Content).modificator === "BLOCK_END") crossedBlank = true;
+            continue;
+        }
+        if (!text.trim()) {
+            crossedBlank = true;
+            continue;
+        }
+        return crossedBlank && text.trimStart().startsWith(tail);
+    }
+    return false;
+}
+
 function trailingNewlines(s: string): number {
     let i = s.length;
     while (i > 0 && s.charCodeAt(i - 1) === 10) i--;
@@ -48,7 +217,14 @@ function trailingNewlines(s: string): number {
  */
 export function renderText(
     postData: Content[] | undefined | null,
-    options: { header?: string; placeholder?: string; fixLongNewlines?: boolean; fixEndNewlines?: boolean } = {}
+    options: {
+        header?: string;
+        placeholder?: string;
+        fixLongNewlines?: boolean;
+        fixEndNewlines?: boolean;
+        /** Run `repairBlocks` first (experimental). */
+        repair?: boolean;
+    } = {}
 ): [string, Entity[]] {
     const { header = "", placeholder = "\n\n", fixLongNewlines = true, fixEndNewlines = true } = options;
     const entities: Entity[] = [];
@@ -57,6 +233,7 @@ export function renderText(
     if (!Array.isArray(postData) || postData.length === 0) {
         return [header, entities];
     }
+    if (options.repair) postData = repairBlocks(postData);
 
     /** Output pieces, joined once at the end: no step reads or copies the text accumulated so far. */
     const parts: string[] = [];

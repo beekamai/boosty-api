@@ -44,7 +44,7 @@ export type { TargetsListOptions } from "./resources/targets";
 export type { VoteOptions } from "./resources/social";
 
 /* Утилиты. */
-export { renderText } from "./utils/post";
+export { renderText, repairBlocks } from "./utils/post";
 export type { Entity } from "./utils/post";
 export { getVideoSizes } from "./utils/video";
 export { interactiveLogin } from "./utils/browser_login";
