@@ -14,19 +14,23 @@
 ## English
 
 Unofficial TypeScript client for the **internal** [Boosty](https://boosty.to) API — a port and
-extension of [`barsikus007/boosty`](https://github.com/barsikus007/boosty), Bun-first, with broad
-endpoint coverage (posts, comments, blog, user, media, social, feed, messaging, income).
+extension of [`barsikus007/boosty`](https://github.com/barsikus007/boosty), Bun-first. It covers what you
+need to run a blog from code: posts, comments, messaging, your account, blog statistics and the whole income
+side (sales, donations, holds, payouts). It does not wrap every route the Boosty web client calls.
 
 > ⚠️ This is an **undocumented** internal API. It can change without notice. Use it only to access
 > **your own** content and within Boosty's Terms of Service.
 
 ### Features
 
-- 📦 **Resource namespaces** — `api.posts`, `api.comments`, `api.blog`, `api.user`, `api.media`, `api.social`, `api.feed`, `api.messaging`, `api.income`.
+- 📦 **Resource namespaces** — `api.posts`, `api.comments`, `api.blog`, `api.user`, `api.media`, `api.social`, `api.feed`, `api.search`, `api.messaging`, `api.income`, `api.stats`, `api.targets`.
+- 📊 **Creator dashboard** — `api.stats` and `api.income` read everything the Boosty statistics and payouts pages show.
 - 🔓 **Anonymous mode** — public posts/comments/profile work without a token.
 - 🔐 **Easy auth** — `npx boosty-api login` (browser or a pasted Cookie header), `Auth.fromTokens` for servers; tokens refresh before expiry and after a 401.
 - 🧩 **Tolerant models** — unknown response fields are preserved (resilient to Boosty schema drift).
 - 🏷️ **Honest status tags** — every method is annotated `@verified` / `@experimental` / `@unverified`.
+- 🔇 **Quiet by default** — only warnings reach stderr; `configureLogging` or `BOOSTY_API_LOG=debug` shows requests, any logger plugs in.
+- 🧰 **Ready-made scripts** — income report, donations CSV export, subscriber welcome, post backup in [`examples/`](examples).
 
 ### Quick start
 
@@ -106,14 +110,21 @@ returns the current set at any time.
 | Namespace | Methods (selected) | Status |
 |---|---|---|
 | `posts` | `list` `get` `create` `update` `delete` `getDeferredAccess` `updateDeferredAccess` | ✅ reads / 🟡 writes |
-| `comments` | `list` `replies` (by the parent's `intId`) `create` `like` `unlike` | ✅ list, replies / 🟡 rest |
-| `blog` | `profile` `subscribers` `subscriptionLevels` `blacklist` | ✅ |
-| `user` | `current` | ✅ |
+| `comments` | `list` `replies` (by the parent's `intId`) `create` `react` `removeReaction` `like` `unlike` | ✅ list, replies / 🟡 rest |
+| `blog` | `profile` `subscribers` `subscriptionLevels` `subscriptionLevel` `blacklist` `unsubscribeReasons` `poll` `pollVoters` | ✅ / 🟡 polls |
+| `user` | reads: `current` `subscriptions` `sessions` `notificationSettings` `paymentCards` `availableBlogCurrencies`; writes: `updateProfile` `updateNotificationSetting` `updateDialogSettings` `setLocale` `endSessions` | ✅ reads / 🟡 writes |
 | `media` | `list` (media_album; `type`: `all` `image` `video` `audio`) | ✅ |
-| `social` | `likePost` `unlikePost` `voteOption` `removeVote` | 🟡 |
+| `social` | `reactToPost` `removePostReaction` `likePost` `unlikePost` `vote` `voteOption` `removeVote` | 🟡 |
 | `feed` | `posts` `searchBlogs` | ✅ |
+| `search` | `postsInFeed` `postsInBlog` `blogSuggest` `feedTags` | ✅ |
 | `messaging` | `dialogs` `dialogWithUser` `createDialog` `messages` `sendMessage` `notifications` `markNotificationsRead` `deleteNotification(s)` | ✅ / 🟡 notification deletes |
-| `income` | `sales` (POST form; may be "Category disabled" per account) | ⚠️ |
+| `income` | `postSales` `donations` `bundleSales` `holds` `broadcastSales` `postSalesByDate` `postSalesDays` `bundleSalesByDate` `bundleSalesDays` `payoutMethods` `payouts` `payoutHistory` `defaultCurrency` | ✅ |
+| `stats` | `summary` `metrics` `charts` `events` `visits` `paymentSources` `referrals` `referralUsers` `searchUsers` `reportInfo` `report` `post` | ✅ / 🟡 `post` |
+| `targets` | reads: `list` `get`; writes: `createMoney` `createSubscribers` `edit` `remove` | ✅ reads / 🟡 writes |
+
+Sales lists sort with `order: "gt"` (newest or largest first) or `"lt"`. `income.sales` is deprecated: the web client does not call it. `stats.report` builds a new report file on
+every call, `reportInfo` returns the last one. Donation payers and payout data include e-mail addresses
+and amounts: treat them as personal data.
 
 Legacy aliases `api.getPost`, `api.getPostComments`, `api.request` are kept for compatibility.
 
@@ -132,7 +143,20 @@ while (!isLast) {
 }
 ```
 
-Other lists page differently: subscribers return `offset` / `total` at the top level, dialogs in `extra`.
+Other lists page differently: stat events carry `extra.isLast` too, subscribers return `offset` / `total` at
+the top level, dialogs in `extra`. Sales lists and payout history hand out a string cursor with
+`extra.total`, and the cursor keeps coming past the last row, so stop on an empty page or on the total:
+
+```ts
+const donations = [];
+let offset: string | undefined;
+for (;;) {
+  const page = await api.income.donations(blog, { limit: 50, offset });
+  donations.push(...page.data);
+  if (page.data.length === 0 || donations.length >= (page.extra?.total ?? Infinity) || !page.extra?.offset) break;
+  offset = page.extra.offset;
+}
+```
 
 **Send a message** — build content blocks with `buildMessage`:
 
@@ -155,6 +179,19 @@ const dialogId = probe.id ?? (await api.messaging.createDialog(userId)).id;
 await api.messaging.sendMessage(dialogId, buildMessage(["Here is your link:", { link: url }]));
 ```
 
+**Creator statistics and income** — numbers from the dashboard, timestamps in Unix seconds:
+
+```ts
+const blog = (await api.user.current()).blogUrl;
+if (!blog) throw new Error("this account has no blog");
+const now = Math.floor(Date.now() / 1000);
+
+const summary = await api.stats.summary(blog); // balance, hold, income, payoutSum, followersCount
+const month = await api.stats.metrics(blog, now - 30 * 86400, now); // totalMoney, donationsMoney, incSubscribers…
+const { data: donations } = await api.income.donations(blog, { limit: 20, sortBy: "time", order: "gt" });
+const payouts = await api.income.payoutHistory(blog);
+```
+
 **Render post text** — `post.text` (or `renderText(blocks)` for comments and blog descriptions) gives plain
 text plus Telegram-style entities:
 
@@ -166,6 +203,24 @@ const [text, entities] = post.text;
 Paragraphs are separated by newlines, headings and list items (`- ` / `1. `) are rendered as text, media
 blocks become the placeholder (`"\n\n"` by default). Malformed blocks are skipped. The `url` of a `text_link`
 is passed through as the author wrote it, `javascript:` included: check the scheme before putting it into HTML.
+
+Old posts carry two artifacts of the Boosty editor: an emoji in a link split in half, and an auto-detected link
+that swallowed the first word of the next paragraph into its URL. `renderText(post.data, { repair: true })` (or
+`repairBlocks(blocks)`) fixes both on a copy. It is experimental: the rules come from a scan of 859 public posts.
+
+**Logging** — the library is quiet by default: login prompts, warnings and errors go to stderr. Turn on
+request lines while debugging, silence it, or hand the lines to your own logger:
+
+```ts
+import { configureLogging } from "boosty-api";
+
+configureLogging({ level: "debug" });          // + every request: method and path, never query or body
+configureLogging({ level: "silent" });         // nothing at all
+configureLogging({ logger: pino() });          // any object with debug/info/warn/error(message)
+```
+
+The `BOOSTY_API_LOG` environment variable (`debug`, `info`, `warn`, `error`, `silent`) sets the starting level
+without touching code: `BOOSTY_API_LOG=debug bun run examples/income-report.ts`.
 
 **Handle errors** — failed requests throw `BoostyError` with status code and body:
 
@@ -189,6 +244,18 @@ import { apiPath } from "boosty-api";
 
 await api.request("GET", apiPath`/v1/blog/${blogName}/post/`);
 ```
+
+### Examples
+
+Runnable scripts in [`examples/`](examples). Clone the repo, run `bun install` and `bun run login`, then
+`bun run examples/<script>`:
+
+| Script | What it does |
+|---|---|
+| [`income-report.ts`](examples/income-report.ts) `[days]` | Balance, what the last N days earned and from where, new and lost subscribers, latest donations and payouts. |
+| [`export-donations.ts`](examples/export-donations.ts) `[out.csv] [--emails]` | Every donation into a CSV file, page by page. Payer e-mails only with `--emails`; names cannot run as spreadsheet formulas. |
+| [`welcome-subscribers.ts`](examples/welcome-subscribers.ts) `[--send]` | Direct message to everyone who subscribed since the last run, skipping people with closed DMs. Dry run unless `--send`; made for cron. |
+| [`backup-posts.ts`](examples/backup-posts.ts) `<blog> [dir]` | Every post you can read as a Markdown file with links, bold, italic, images and files. Public posts work without a token. |
 
 ### Note on `declare` fields
 
@@ -235,19 +302,23 @@ MIT.
 ## Русский
 
 Неофициальный TypeScript-клиент **внутреннего** API [Boosty](https://boosty.to) — порт и расширение
-[`barsikus007/boosty`](https://github.com/barsikus007/boosty), на Bun, с широким покрытием эндпоинтов
-(posts, comments, blog, user, media, social, feed, messaging, income).
+[`barsikus007/boosty`](https://github.com/barsikus007/boosty), на Bun. Покрывает то, что нужно для ведения
+блога из кода: посты, комментарии, сообщения, свой аккаунт, статистику блога и весь доход (продажи, донаты,
+холды, выплаты). Не все маршруты, которые вызывает веб-клиент Boosty, обёрнуты.
 
 > ⚠️ Это **недокументированный** внутренний API. Он может измениться без предупреждения. Используйте
 > только для доступа к **своему** контенту и в рамках правил Boosty.
 
 ### Возможности
 
-- 📦 **Resource-неймспейсы** — `api.posts`, `api.comments`, `api.blog`, `api.user`, `api.media`, `api.social`, `api.feed`, `api.messaging`, `api.income`.
+- 📦 **Resource-неймспейсы** — `api.posts`, `api.comments`, `api.blog`, `api.user`, `api.media`, `api.social`, `api.feed`, `api.search`, `api.messaging`, `api.income`, `api.stats`, `api.targets`.
+- 📊 **Кабинет автора** — `api.stats` и `api.income` читают всё, что показывают страницы статистики и выплат Boosty.
 - 🔓 **Анонимный режим** — публичные посты/комментарии/профиль работают без токена.
 - 🔐 **Простой вход** — `npx boosty-api login` (браузер или вставленный заголовок Cookie), `Auth.fromTokens` для серверов; токены обновляются до истечения и после 401.
 - 🧩 **Толерантные модели** — неизвестные поля ответа сохраняются (устойчивость к изменениям схемы Boosty).
 - 🏷️ **Честные метки статуса** — у каждого метода JSDoc `@verified` / `@experimental` / `@unverified`.
+- 🔇 **Тихо по умолчанию** — в stderr только предупреждения; `configureLogging` или `BOOSTY_API_LOG=debug` покажут запросы, подключается любой логгер.
+- 🧰 **Готовые скрипты** — отчёт о доходе, выгрузка донатов в CSV, приветствие подписчиков, бэкап постов в [`examples/`](examples).
 
 ### Быстрый старт
 
@@ -332,14 +403,21 @@ const api = new API({ auth });
 | Неймспейс | Методы (выборочно) | Статус |
 |---|---|---|
 | `posts` | `list` `get` `create` `update` `delete` `getDeferredAccess` `updateDeferredAccess` | ✅ чтение / 🟡 запись |
-| `comments` | `list` `replies` (по `intId` родителя) `create` `like` `unlike` | ✅ list, replies / 🟡 остальное |
-| `blog` | `profile` `subscribers` `subscriptionLevels` `blacklist` | ✅ |
-| `user` | `current` | ✅ |
+| `comments` | `list` `replies` (по `intId` родителя) `create` `react` `removeReaction` `like` `unlike` | ✅ list, replies / 🟡 остальное |
+| `blog` | `profile` `subscribers` `subscriptionLevels` `subscriptionLevel` `blacklist` `unsubscribeReasons` `poll` `pollVoters` | ✅ / 🟡 опросы |
+| `user` | чтение: `current` `subscriptions` `sessions` `notificationSettings` `paymentCards` `availableBlogCurrencies`; запись: `updateProfile` `updateNotificationSetting` `updateDialogSettings` `setLocale` `endSessions` | ✅ чтение / 🟡 запись |
 | `media` | `list` (media_album; `type`: `all` `image` `video` `audio`) | ✅ |
-| `social` | `likePost` `unlikePost` `voteOption` `removeVote` | 🟡 |
+| `social` | `reactToPost` `removePostReaction` `likePost` `unlikePost` `vote` `voteOption` `removeVote` | 🟡 |
 | `feed` | `posts` `searchBlogs` | ✅ |
+| `search` | `postsInFeed` `postsInBlog` `blogSuggest` `feedTags` | ✅ |
 | `messaging` | `dialogs` `dialogWithUser` `createDialog` `messages` `sendMessage` `notifications` `markNotificationsRead` `deleteNotification(s)` | ✅ / 🟡 удаление уведомлений |
-| `income` | `sales` (POST form; может быть «Category disabled» у аккаунта) | ⚠️ |
+| `income` | `postSales` `donations` `bundleSales` `holds` `broadcastSales` `postSalesByDate` `postSalesDays` `bundleSalesByDate` `bundleSalesDays` `payoutMethods` `payouts` `payoutHistory` `defaultCurrency` | ✅ |
+| `stats` | `summary` `metrics` `charts` `events` `visits` `paymentSources` `referrals` `referralUsers` `searchUsers` `reportInfo` `report` `post` | ✅ / 🟡 `post` |
+| `targets` | чтение: `list` `get`; запись: `createMoney` `createSubscribers` `edit` `remove` | ✅ чтение / 🟡 запись |
+
+Списки продаж сортируются `order: "gt"` (сначала новые или крупные) или `"lt"`. `income.sales` устарел: веб-клиент его не вызывает. `stats.report` при каждом вызове собирает новый файл
+отчёта, `reportInfo` возвращает последний. В донатах и выплатах есть e-mail плательщиков и суммы —
+обращайтесь с ними как с персональными данными.
 
 Легаси-алиасы `api.getPost`, `api.getPostComments`, `api.request` сохранены для совместимости.
 
@@ -358,7 +436,21 @@ while (!isLast) {
 }
 ```
 
-Другие списки листаются иначе: у подписчиков `offset` / `total` лежат на верхнем уровне, у диалогов — в `extra`.
+Другие списки листаются иначе: у событий статистики тоже есть `extra.isLast`, у подписчиков `offset` /
+`total` лежат на верхнем уровне, у диалогов — в `extra`. Списки продаж и история выплат отдают строковый
+курсор и `extra.total`, причём курсор приходит и после последней строки — останавливайтесь на пустой
+странице или по total:
+
+```ts
+const donations = [];
+let offset: string | undefined;
+for (;;) {
+  const page = await api.income.donations(blog, { limit: 50, offset });
+  donations.push(...page.data);
+  if (page.data.length === 0 || donations.length >= (page.extra?.total ?? Infinity) || !page.extra?.offset) break;
+  offset = page.extra.offset;
+}
+```
 
 **Отправка сообщения** — собираем блоки контента через `buildMessage`:
 
@@ -381,6 +473,19 @@ const dialogId = probe.id ?? (await api.messaging.createDialog(userId)).id;
 await api.messaging.sendMessage(dialogId, buildMessage(["Ваша ссылка:", { link: url }]));
 ```
 
+**Статистика и доход автора** — цифры из кабинета, время в Unix-секундах:
+
+```ts
+const blog = (await api.user.current()).blogUrl;
+if (!blog) throw new Error("у этого аккаунта нет блога");
+const now = Math.floor(Date.now() / 1000);
+
+const summary = await api.stats.summary(blog); // balance, hold, income, payoutSum, followersCount
+const month = await api.stats.metrics(blog, now - 30 * 86400, now); // totalMoney, donationsMoney, incSubscribers…
+const { data: donations } = await api.income.donations(blog, { limit: 20, sortBy: "time", order: "gt" });
+const payouts = await api.income.payoutHistory(blog);
+```
+
 **Текст поста** — `post.text` (или `renderText(blocks)` для комментариев и описания блога) отдаёт обычный
 текст и сущности в стиле Telegram:
 
@@ -392,6 +497,24 @@ const [text, entities] = post.text;
 Абзацы разделены переводом строки, заголовки и пункты списков (`- ` / `1. `) выводятся текстом, медиа-блоки
 заменяются плейсхолдером (по умолчанию `"\n\n"`). Битые блоки пропускаются. `url` у `text_link` отдаётся
 как его написал автор, включая `javascript:`: проверяйте схему, прежде чем вставлять в HTML.
+
+В старых постах встречаются два артефакта редактора Boosty: разрезанное пополам эмодзи в ссылке и авто-ссылка,
+утащившая в URL первое слово следующего абзаца. `renderText(post.data, { repair: true })` (или
+`repairBlocks(blocks)`) чинит оба на копии блоков. Экспериментально: правила выведены из 859 публичных постов.
+
+**Логи** — по умолчанию библиотека молчит: в stderr идут только подсказки входа, предупреждения и ошибки.
+Запросы можно включить для отладки, логи — выключить совсем или отдать своему логгеру:
+
+```ts
+import { configureLogging } from "boosty-api";
+
+configureLogging({ level: "debug" });          // + каждый запрос: метод и путь, без query и тела
+configureLogging({ level: "silent" });         // ничего
+configureLogging({ logger: pino() });          // любой объект с debug/info/warn/error(message)
+```
+
+Переменная окружения `BOOSTY_API_LOG` (`debug`, `info`, `warn`, `error`, `silent`) задаёт стартовый уровень без
+правки кода: `BOOSTY_API_LOG=debug bun run examples/income-report.ts`.
 
 **Обработка ошибок** — неуспешные запросы бросают `BoostyError` со статусом и телом:
 
@@ -415,6 +538,18 @@ import { apiPath } from "boosty-api";
 
 await api.request("GET", apiPath`/v1/blog/${blogName}/post/`);
 ```
+
+### Примеры
+
+Готовые скрипты в [`examples/`](examples). Клонируйте репозиторий, выполните `bun install` и `bun run login`,
+затем `bun run examples/<скрипт>`:
+
+| Скрипт | Что делает |
+|---|---|
+| [`income-report.ts`](examples/income-report.ts) `[дни]` | Баланс, сколько принесли последние N дней и откуда, новые и ушедшие подписчики, последние донаты и выплаты. |
+| [`export-donations.ts`](examples/export-donations.ts) `[out.csv] [--emails]` | Все донаты в CSV-файл, постранично. E-mail плательщиков только с `--emails`; имена не исполнятся как формулы в таблице. |
+| [`welcome-subscribers.ts`](examples/welcome-subscribers.ts) `[--send]` | Личное сообщение всем, кто подписался с прошлого запуска; закрытые личку пропускает. Без `--send` — пробный прогон; рассчитан на cron. |
+| [`backup-posts.ts`](examples/backup-posts.ts) `<блог> [папка]` | Все доступные посты в Markdown-файлы со ссылками, жирным, курсивом, картинками и файлами. Публичные посты — без токена. |
 
 ### Про поля `declare`
 

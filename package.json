@@ -1,7 +1,7 @@
 {
   "name": "boosty-api",
   "version": "0.4.0",
-  "description": "Unofficial TypeScript client for the internal Boosty (boosty.to) API. Full endpoint coverage, works on Bun and Node.",
+  "description": "Unofficial TypeScript client for the internal Boosty (boosty.to) API. Posts, comments, messaging, account, blog statistics and income; works on Bun and Node.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -11,7 +11,8 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "bin": {
     "boosty-api": "./dist/cli.js"

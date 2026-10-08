@@ -20,6 +20,9 @@ import { SocialResource } from "./resources/social";
 import { FeedResource } from "./resources/feed";
 import { MessagingResource } from "./resources/messaging";
 import { IncomeResource } from "./resources/income";
+import { StatsResource } from "./resources/stats";
+import { SearchResource } from "./resources/search";
+import { TargetsResource } from "./resources/targets";
 
 /* Types for legacy aliases */
 import type { Post } from "./types/post";
@@ -37,6 +40,7 @@ export interface APIOptions {
 
 export class API implements ApiCore {
     private httpClient: HTTPClient;
+    private warnedAnonymous401 = false;
     public auth: Auth;
 
     /* Resource namespaces (full coverage of the internal API) */
@@ -49,6 +53,9 @@ export class API implements ApiCore {
     public readonly feed: FeedResource;
     public readonly messaging: MessagingResource;
     public readonly income: IncomeResource;
+    public readonly stats: StatsResource;
+    public readonly search: SearchResource;
+    public readonly targets: TargetsResource;
 
     /**
      * `new API()` reads `./auth.json` (anonymous if there is none); `new API({ auth })` takes an `Auth`
@@ -74,6 +81,9 @@ export class API implements ApiCore {
         this.feed = new FeedResource(this);
         this.messaging = new MessagingResource(this);
         this.income = new IncomeResource(this);
+        this.stats = new StatsResource(this);
+        this.search = new SearchResource(this);
+        this.targets = new TargetsResource(this);
     }
 
     /**
@@ -124,7 +134,8 @@ export class API implements ApiCore {
             headers["Content-Type"] = "application/x-www-form-urlencoded";
         }
 
-        logger.info(`${method} ${url.toString()}`);
+        // Query values can carry personal data (search strings, e-mails): log the route only
+        logger.debug(`${method} ${url.origin}${url.pathname}`);
         const response = await this.httpClient.request(url.toString(), init);
 
         // An anonymous client has nothing to refresh: its 401 is a plain BoostyError below
@@ -135,6 +146,12 @@ export class API implements ApiCore {
                 await this.auth.refreshAuthData(this.httpClient, API_URL);
             }
             return this.request<T>(method, path, { ...options, _retried: true });
+        }
+
+        // Without auth.json in the working directory the client runs anonymous: say so once instead of a bare 401
+        if (response.status === 401 && !anon && !this.auth.isAuthenticated && !this.warnedAnonymous401) {
+            this.warnedAnonymous401 = true;
+            logger.warn("401 and this client has no token: log in with `npx boosty-api login`, or check the auth file path and its contents");
         }
 
         const body = await this.parseResponse(response);
@@ -154,7 +171,7 @@ export class API implements ApiCore {
         try {
             return JSON.parse(text);
         } catch {
-            logger.warn(`Response is not JSON (status ${response.status}): ${text.slice(0, 200)}`);
+            logger.warn(`Response is not JSON (status ${response.status}, ${text.length} chars)`);
             return text;
         }
     }

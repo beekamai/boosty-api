@@ -1,5 +1,8 @@
 /* Interactive login: opens a browser at boosty.to, waits for the session cookies, keeps the tokens. */
 import { logger } from "./logging";
+
+/** Interactive login talks to the person at the keyboard: these lines are shown whatever the log level. */
+const prompt = (message: string): void => console.error(message);
 import { LOGIN_URL, DEFAULT_USER_AGENT } from "./consts";
 import { printable } from "./printable";
 import { Auth } from "../auth/auth";
@@ -67,7 +70,7 @@ export async function interactiveLogin(
     }
     // Name the account the browser handed over, so a session that is not yours does not go unnoticed
     const who = await new API({ auth }).user.current().then((user) => printable(user.name ?? ""), () => null);
-    logger.info(who ? `Logged in as ${who}` : "Logged in, but the session could not be checked");
+    prompt(who ? `Logged in as ${who}` : "Logged in, but the session could not be checked");
     return auth;
 }
 
@@ -96,9 +99,9 @@ async function loginInBrowser(userAgent: string, timeoutMs: number): Promise<Aut
             await page.waitForSelector(SIGN_IN_BUTTON, { timeout: 15_000 });
             await page.click(SIGN_IN_BUTTON);
         } catch {
-            logger.warn("Sign-in button not found: open the login form in the browser window yourself");
+            prompt("Sign-in button not found: open the login form in the browser window yourself");
         }
-        logger.info("Please log in to Boosty through the browser window that opened...");
+        prompt("Please log in to Boosty through the browser window that opened...");
 
         // Wait for the session cookie itself, not a navigation: OAuth logins redirect before the cookie is set
         const deadline = Date.now() + timeoutMs;

@@ -17,7 +17,7 @@ export class FileAuthDataResolver extends ABCAuthDataResolver {
             text = readFileSync(this.authFile, "utf-8");
         } catch (error) {
             if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-                logger.info(`Auth file (${this.authFile}) wasn't found, using blank values (anonymous access mode)`);
+                logger.debug(`Auth file (${this.authFile}) wasn't found, using blank values (anonymous access mode)`);
                 this.authData = new AuthData();
                 return this.authData;
             }

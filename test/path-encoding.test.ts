@@ -51,16 +51,16 @@ const CASES: [string, (api: API, v: string) => Promise<unknown>, string][] = [
     ["comments.list", (a, v) => a.comments.list(v, v), "/v1/blog/{}/post/{}/comment/"],
     ["comments.replies", (a, v) => a.comments.replies(v, v, 1), "/v1/blog/{}/post/{}/comment/"],
     ["comments.create", (a, v) => a.comments.create(v, v, []), "/v1/blog/{}/post/{}/comment/"],
-    ["comments.like", (a, v) => a.comments.like(v, v, v), "/v1/blog/{}/post/{}/comment/{}/like"],
-    ["comments.unlike", (a, v) => a.comments.unlike(v, v, v), "/v1/blog/{}/post/{}/comment/{}/like"],
+    ["comments.like", (a, v) => a.comments.like(v, v, v), "/v1/blog/{}/post/{}/comment/{}/reaction"],
+    ["comments.unlike", (a, v) => a.comments.unlike(v, v, v), "/v1/blog/{}/post/{}/comment/{}/reaction"],
     ["blog.profile", (a, v) => a.blog.profile(v), "/v1/blog/{}"],
     ["blog.subscribers", (a, v) => a.blog.subscribers(v), "/v1/blog/{}/subscribers"],
     ["blog.subscriptionLevels", (a, v) => a.blog.subscriptionLevels(v), "/v1/blog/{}/subscription_level/"],
     ["media.list", (a, v) => a.media.list(v), "/v1/blog/{}/media_album/"],
     ["social.likePost", (a, v) => a.social.likePost(v, v), "/v1/blog/{}/post/{}/like"],
     ["social.unlikePost", (a, v) => a.social.unlikePost(v, v), "/v1/blog/{}/post/{}/like"],
-    ["social.voteOption", (a, v) => a.social.voteOption(v, v, v), "/v1/blog/{}/poll/{}/answer/{}"],
-    ["social.removeVote", (a, v) => a.social.removeVote(v, v, v), "/v1/blog/{}/poll/{}/answer/{}"],
+    ["social.voteOption", (a, v) => a.social.voteOption(v, v, v), "/v1/poll/{}/vote"],
+    ["social.removeVote", (a, v) => a.social.removeVote(v, v, v), "/v1/poll/{}/vote"],
     ["messaging.messages", (a, v) => a.messaging.messages(v), "/v1/dialog/{}/message/"],
     ["messaging.sendMessage", (a, v) => a.messaging.sendMessage(v, []), "/v1/dialog/{}/message"],
 ];
@@ -77,7 +77,7 @@ describe("path segment encoding", () => {
         await api.comments.unlike("blog", "1", "7?x=1#y");
         expect(calls).toHaveLength(1);
         expect(calls[0]!.method).toBe("DELETE");
-        expect(calls[0]!.url.pathname).toBe("/v1/blog/blog/post/1/comment/7%3Fx%3D1%23y/like");
+        expect(calls[0]!.url.pathname).toBe("/v1/blog/blog/post/1/comment/7%3Fx%3D1%23y/reaction");
     });
 
     for (const [name, call, template] of CASES) {
@@ -98,18 +98,20 @@ describe("path segment encoding", () => {
     test("apiPath is exported for api.request callers", () => {
         expect(apiPath`/v1/blog/${"a?b"}/post/${42}`).toBe("/v1/blog/a%3Fb/post/42");
         expect(() => apiPath`/v1/blog/${"../x"}`).toThrow(TypeError);
+        expect(() => apiPath`/v1/blog/${undefined as any}/post/`).toThrow(TypeError);
+        expect(() => apiPath`/v1/blog/${null as any}/post/`).toThrow(TypeError);
     });
 
     test("numeric ids are accepted as-is", async () => {
         const { api, calls } = setup();
         await api.social.voteOption("blog", 42, 7);
-        expect(calls[0]!.url.pathname).toBe("/v1/blog/blog/poll/42/answer/7");
+        expect(calls[0]!.url.pathname).toBe("/v1/poll/42/vote");
     });
 
     test("ordinary ids are not altered", async () => {
         const { api, calls } = setup();
         await api.comments.like("my-blog_1", "a1b2c3d4-0000-4000-8000-000000000000", 123);
-        expect(calls[0]!.url.pathname).toBe("/v1/blog/my-blog_1/post/a1b2c3d4-0000-4000-8000-000000000000/comment/123/like");
+        expect(calls[0]!.url.pathname).toBe("/v1/blog/my-blog_1/post/a1b2c3d4-0000-4000-8000-000000000000/comment/123/reaction");
     });
 
     for (const bad of ["", ".", "..", "x\uD83E", "../../x", "a/b", "..\\x", "a\\b"]) {
