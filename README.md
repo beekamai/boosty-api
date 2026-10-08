@@ -29,6 +29,8 @@ side (sales, donations, holds, payouts). It does not wrap every route the Boosty
 - 🔐 **Easy auth** — `npx boosty-api login` (browser or a pasted Cookie header), `Auth.fromTokens` for servers; tokens refresh before expiry and after a 401.
 - 🧩 **Tolerant models** — unknown response fields are preserved (resilient to Boosty schema drift).
 - 🏷️ **Honest status tags** — every method is annotated `@verified` / `@experimental` / `@unverified`.
+- 🔇 **Quiet by default** — only warnings reach stderr; `configureLogging` or `BOOSTY_API_LOG=debug` shows requests, any logger plugs in.
+- 🧰 **Ready-made scripts** — income report, donations CSV export, subscriber welcome, post backup in [`examples/`](examples).
 
 ### Quick start
 
@@ -315,6 +317,8 @@ MIT.
 - 🔐 **Простой вход** — `npx boosty-api login` (браузер или вставленный заголовок Cookie), `Auth.fromTokens` для серверов; токены обновляются до истечения и после 401.
 - 🧩 **Толерантные модели** — неизвестные поля ответа сохраняются (устойчивость к изменениям схемы Boosty).
 - 🏷️ **Честные метки статуса** — у каждого метода JSDoc `@verified` / `@experimental` / `@unverified`.
+- 🔇 **Тихо по умолчанию** — в stderr только предупреждения; `configureLogging` или `BOOSTY_API_LOG=debug` покажут запросы, подключается любой логгер.
+- 🧰 **Готовые скрипты** — отчёт о доходе, выгрузка донатов в CSV, приветствие подписчиков, бэкап постов в [`examples/`](examples).
 
 ### Быстрый старт
 
