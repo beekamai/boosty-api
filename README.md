@@ -141,7 +141,20 @@ while (!isLast) {
 }
 ```
 
-Other lists page differently: subscribers return `offset` / `total` at the top level, dialogs in `extra`.
+Other lists page differently: stat events carry `extra.isLast` too, subscribers return `offset` / `total` at
+the top level, dialogs in `extra`. Sales lists and payout history hand out a string cursor with
+`extra.total`, and the cursor keeps coming past the last row, so stop on an empty page or on the total:
+
+```ts
+const donations = [];
+let offset: string | undefined;
+for (;;) {
+  const page = await api.income.donations(blog, { limit: 50, offset });
+  donations.push(...page.data);
+  if (page.data.length === 0 || donations.length >= (page.extra?.total ?? Infinity) || !page.extra?.offset) break;
+  offset = page.extra.offset;
+}
+```
 
 **Send a message** — build content blocks with `buildMessage`:
 
@@ -211,6 +224,18 @@ import { apiPath } from "boosty-api";
 
 await api.request("GET", apiPath`/v1/blog/${blogName}/post/`);
 ```
+
+### Examples
+
+Runnable scripts in [`examples/`](examples). Clone the repo, run `bun install` and `bun run login`, then
+`bun run examples/<script>`:
+
+| Script | What it does |
+|---|---|
+| [`income-report.ts`](examples/income-report.ts) `[days]` | Balance, what the last N days earned and from where, new and lost subscribers, latest donations and payouts. |
+| [`export-donations.ts`](examples/export-donations.ts) `[out.csv] [--emails]` | Every donation into a CSV file, page by page. Payer e-mails only with `--emails`; names cannot run as spreadsheet formulas. |
+| [`welcome-subscribers.ts`](examples/welcome-subscribers.ts) `[--send]` | Direct message to everyone who subscribed since the last run, skipping people with closed DMs. Dry run unless `--send`; made for cron. |
+| [`backup-posts.ts`](examples/backup-posts.ts) `<blog> [dir]` | Every post you can read as a Markdown file with links, bold, italic, images and files. Public posts work without a token. |
 
 ### Note on `declare` fields
 
@@ -389,7 +414,21 @@ while (!isLast) {
 }
 ```
 
-Другие списки листаются иначе: у подписчиков `offset` / `total` лежат на верхнем уровне, у диалогов — в `extra`.
+Другие списки листаются иначе: у событий статистики тоже есть `extra.isLast`, у подписчиков `offset` /
+`total` лежат на верхнем уровне, у диалогов — в `extra`. Списки продаж и история выплат отдают строковый
+курсор и `extra.total`, причём курсор приходит и после последней строки — останавливайтесь на пустой
+странице или по total:
+
+```ts
+const donations = [];
+let offset: string | undefined;
+for (;;) {
+  const page = await api.income.donations(blog, { limit: 50, offset });
+  donations.push(...page.data);
+  if (page.data.length === 0 || donations.length >= (page.extra?.total ?? Infinity) || !page.extra?.offset) break;
+  offset = page.extra.offset;
+}
+```
 
 **Отправка сообщения** — собираем блоки контента через `buildMessage`:
 
@@ -459,6 +498,18 @@ import { apiPath } from "boosty-api";
 
 await api.request("GET", apiPath`/v1/blog/${blogName}/post/`);
 ```
+
+### Примеры
+
+Готовые скрипты в [`examples/`](examples). Клонируйте репозиторий, выполните `bun install` и `bun run login`,
+затем `bun run examples/<скрипт>`:
+
+| Скрипт | Что делает |
+|---|---|
+| [`income-report.ts`](examples/income-report.ts) `[дни]` | Баланс, сколько принесли последние N дней и откуда, новые и ушедшие подписчики, последние донаты и выплаты. |
+| [`export-donations.ts`](examples/export-donations.ts) `[out.csv] [--emails]` | Все донаты в CSV-файл, постранично. E-mail плательщиков только с `--emails`; имена не исполнятся как формулы в таблице. |
+| [`welcome-subscribers.ts`](examples/welcome-subscribers.ts) `[--send]` | Личное сообщение всем, кто подписался с прошлого запуска; закрытые личку пропускает. Без `--send` — пробный прогон; рассчитан на cron. |
+| [`backup-posts.ts`](examples/backup-posts.ts) `<блог> [папка]` | Все доступные посты в Markdown-файлы со ссылками, жирным, курсивом, картинками и файлами. Публичные посты — без токена. |
 
 ### Про поля `declare`
 
