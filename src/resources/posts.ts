@@ -1,6 +1,5 @@
 /* resources/posts.ts — blog posts (CRUD) and deferred access. */
-/* Statuses: list/get/comments — @verified (present in the barsikus007/boosty reference). */
-/*           create/update/delete/deferred_access — @verified by paths, write body @experimental. */
+/* list/get: @verified as present in the barsikus007/boosty reference. */
 import { BaseResource, apiPath } from "../http";
 import { Post, PostsResponse, type EditedPost, type NewPost } from "../types/post";
 import {

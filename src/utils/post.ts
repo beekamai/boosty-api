@@ -229,7 +229,6 @@ export function renderText(
     const { header = "", placeholder = "\n\n", fixLongNewlines = true, fixEndNewlines = true } = options;
     const entities: Entity[] = [];
 
-    // If postData is missing, empty or not a list of blocks, return just the header
     if (!Array.isArray(postData) || postData.length === 0) {
         return [header, entities];
     }

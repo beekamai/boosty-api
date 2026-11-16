@@ -27,12 +27,11 @@ export async function getVideoSizes(api: API, name: string, content: Video): Pro
     const ind = playerHtml.indexOf(marker);
     if (ind === -1) throw new Error("data-options not found in player HTML");
 
-    /* After `data-options="` comes the attribute value up to the next quote. */
     const doIndex = ind + marker.length + 1; // +1 — the attribute's opening quote
     const endIndex = playerHtml.indexOf('"', doIndex);
     if (endIndex === -1) throw new Error("Malformed data-options attribute in player HTML");
 
-    /* FIX: HTML entities (&quot; etc.) must be decoded before JSON.parse. */
+    /* The attribute value is HTML-escaped (&quot; etc.): decode it before JSON.parse. */
     const videoDataRaw = decodeHtmlEntities(playerHtml.slice(doIndex, endIndex));
 
     let sizesList: Array<{ url: string; name: string }>;

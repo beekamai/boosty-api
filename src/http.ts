@@ -1,5 +1,5 @@
 /* http.ts — transport layer and the API core contract. */
-/* Kept separate so resource modules (api/*.ts) depend on the ApiCore interface */
+/* Kept separate so resource modules (resources/*.ts) depend on the ApiCore interface */
 /* rather than the concrete API class — this breaks the circular dependency. */
 import type { Auth } from "./auth/auth";
 
@@ -24,12 +24,12 @@ export class BoostyError extends Error {
     }
 }
 
-/** Default implementation on native fetch. node-fetch is no longer needed. */
+/** Default implementation on native fetch. */
 export const defaultHttpClient: HTTPClient = {
     request: (url, options) => fetch(url, options),
 };
 
-/** Options for a single API request. None/undefined values inside params/json/form are dropped. */
+/** Options for a single API request: null/undefined values inside params/json/form are dropped. */
 export interface RequestOptions {
     /** Query parameters. */
     params?: Record<string, unknown>;

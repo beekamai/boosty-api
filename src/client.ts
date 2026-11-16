@@ -10,7 +10,6 @@ import {
     type RequestOptions,
 } from "./http";
 
-/* Resource modules */
 import { PostsResource } from "./resources/posts";
 import { CommentsResource } from "./resources/comments";
 import { BlogResource } from "./resources/blog";
@@ -43,7 +42,6 @@ export class API implements ApiCore {
     private warnedAnonymous401 = false;
     public auth: Auth;
 
-    /* Resource namespaces (full coverage of the internal API) */
     public readonly posts: PostsResource;
     public readonly comments: CommentsResource;
     public readonly blog: BlogResource;
@@ -91,12 +89,12 @@ export class API implements ApiCore {
      * - params/json/form: null/undefined keys are dropped (important for Boosty routing);
      * - anon: do not send Authorization even if a token is present (public access);
      * - 401 → one refresh + retry (protected from infinite recursion via _retried);
-     * - empty/non-JSON response → null (fixes crash on DELETE/204).
+     * - 204 or an empty body → null, a non-JSON body → its text (see parseResponse).
      */
     async request<T = any>(method: string, path: string, options: RequestOptions = {}): Promise<T> {
         const { params, json, form, anon = false, _retried = false } = options;
 
-        /* Proactive refresh before the request if the token has expired (authorized only). */
+        /* Authorized only: store tokens a previous refresh could not; on the first attempt also refresh an expired token. */
         if (!anon && _retried) {
             await this.auth.ensureSaved();
         } else if (!anon) {
@@ -176,9 +174,7 @@ export class API implements ApiCore {
         }
     }
 
-    /* ────────────────────────────────────────────────────────────────────────── */
-    /* Legacy aliases — backward compatibility with old code (examples/demo.ts etc.) */
-    /* ────────────────────────────────────────────────────────────────────────── */
+    /* Legacy aliases, kept for backward compatibility. */
 
     /** @deprecated use api.posts.get(...) */
     async getPost(blogName: string, postId: string, commentsLimit?: number, replyLimit?: number): Promise<Post> {

@@ -1,5 +1,4 @@
 /* resources/messaging.ts — dialogs, messages, notifications. */
-/* The whole module is @experimental: paths reconstructed from the web client, need verification on traffic. */
 import { BaseResource, apiPath } from "../http";
 import { Dialog, DialogsResponse, DialogWithUser, MessagesResponse } from "../types/messaging";
 import { NotificationsResponse } from "../types/notification";

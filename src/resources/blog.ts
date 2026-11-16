@@ -1,4 +1,4 @@
-/* resources/blog.ts — blog: profile, subscribers, subscription levels, blacklist. */
+/* resources/blog.ts — blog: profile, subscribers, subscription levels, polls, the unsubscribe survey, blacklist. */
 import { BaseResource, apiPath, commaList } from "../http";
 import { BlogProfile } from "../types/blog";
 import { SubscribersResponse } from "../types/subscriber";

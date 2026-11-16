@@ -120,7 +120,7 @@ export class Auth {
             try {
                 stored = this.authResolver.loadAuthData();
             } catch {
-                // Kept below
+                // A broken store is handled like a missing one below
             }
             if (stored?.refresh_token) this.authData = stored;
             else this.authResolver.authData = this.authData;
