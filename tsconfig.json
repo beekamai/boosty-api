@@ -7,10 +7,10 @@
     "moduleDetection": "force",
     "allowImportingTsExtensions": true,
 
-    // ВАЖНО: модели наследуют BaseObject, который копирует поля ответа в конструкторе.
-    // С define-семантикой (по умолчанию при target ESNext) объявления полей вида
-    // `id?: string` выполнялись бы как `this.id = undefined` ПОСЛЕ super(), затирая
-    // скопированные значения. Отключаем, чтобы объявления полей не генерировали код.
+    // IMPORTANT: models extend BaseObject, whose constructor copies the response fields.
+    // With define semantics (the default for target ESNext) a field declaration like
+    // `id?: string` would run as `this.id = undefined` AFTER super(), wiping out the
+    // copied value. Turned off so that field declarations emit no code.
     "useDefineForClassFields": false,
     "verbatimModuleSyntax": false,
     "noEmit": true,

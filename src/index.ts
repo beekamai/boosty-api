@@ -1,4 +1,4 @@
-/* Публичная точка входа библиотеки boosty-api. */
+/* Public entry point of the boosty-api library. */
 export { API } from "./client";
 export type { APIOptions } from "./client";
 export { BoostyError, apiPath } from "./http";
@@ -11,8 +11,8 @@ export type { AuthTokens, AuthCookies } from "./auth/auth-data";
 export { FileAuthDataResolver } from "./auth/file-auth-data-resolver";
 export { MemoryAuthDataResolver } from "./auth/memory-auth-data-resolver";
 
-/* Модели и типы. content.ts реэкспортит контент-типы из media-types,
-   поэтому media-types напрямую не экспортируем (во избежание дублей). */
+/* Models and types. content.ts re-exports the content block types of media-types,
+   so media-types is not exported directly (no duplicate exports). */
 export * from "./types/base";
 export * from "./types/content";
 export * from "./types/post";
@@ -43,7 +43,7 @@ export type { SearchPageOptions, SearchPostsOptions, SearchFeedPostsOptions, Sea
 export type { TargetsListOptions } from "./resources/targets";
 export type { VoteOptions } from "./resources/social";
 
-/* Утилиты. */
+/* Utilities. */
 export { renderText, repairBlocks } from "./utils/post";
 export { configureLogging } from "./utils/logging";
 export type { LogLevel, Logger } from "./utils/logging";
