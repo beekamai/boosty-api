@@ -1,5 +1,6 @@
 /* Blog posts (CRUD) and deferred access. */
 /* list/get: @verified as present in the barsikus007/boosty reference. */
+/* create/update/delete/deferred_access: @verified by path, write bodies @experimental. */
 import { BaseResource, apiPath } from "../http";
 import { Post, PostsResponse, type EditedPost, type NewPost } from "../types/post";
 import {
