@@ -1,4 +1,4 @@
-/* resources/social.ts — social actions: post reactions, poll voting. */
+/* Social actions: post reactions, poll voting. */
 /* The whole module is @experimental: paths and bodies come from the web client, never run live (writes). */
 import { BaseResource, apiPath } from "../http";
 import type { ReactionName } from "../types/reactions";

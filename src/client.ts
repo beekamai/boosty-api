@@ -1,4 +1,4 @@
-/* client.ts — transport core + assembly of resource namespaces. */
+/* Transport core + assembly of resource namespaces. */
 import { logger } from "./utils/logging";
 import { API_URL } from "./utils/consts";
 import { Auth, TokenPersistError } from "./auth/auth";

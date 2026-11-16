@@ -1,4 +1,4 @@
-/* resources/stats.ts — blog owner's analytics: totals, charts, events, visits, referrals, reports. */
+/* Blog owner's analytics: totals, charts, events, visits, referrals, reports. */
 import { BaseResource, apiPath, commaList } from "../http";
 import {
     BlogCharts,

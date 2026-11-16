@@ -1,4 +1,4 @@
-/* resources/user.ts — the current user: profile, account settings, sessions, notification switches. */
+/* The current user: profile, account settings, sessions, notification switches. */
 import { BaseResource, apiPath } from "../http";
 import {
     ActiveSessionsResponse,

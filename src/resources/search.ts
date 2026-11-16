@@ -1,4 +1,4 @@
-/* resources/search.ts — search over posts, blogs and tags. Blog search by name: `feed.searchBlogs`. */
+/* Search over posts, blogs and tags. Blog search by name: `feed.searchBlogs`. */
 import { BaseResource, commaList } from "../http";
 import { SearchBlogsResponse } from "../types/blog";
 import { SearchPostsResponse, SearchTagsResponse } from "../types/search";

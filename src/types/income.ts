@@ -1,4 +1,4 @@
-/* types/income.ts — models of the blog owner's billing: sales, donations, payouts. */
+/* Models of the blog owner's billing: sales, donations, payouts. */
 import { BaseObject } from "./base";
 import { BaseUser } from "./users";
 

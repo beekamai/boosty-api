@@ -1,4 +1,4 @@
-/* resources/comments.ts — comments and replies. */
+/* Comments and replies. */
 import { BaseResource, apiPath } from "../http";
 import { Comment, CommentsResponse, RepliesResponse } from "../types/comment";
 import type { ReactionName } from "../types/reactions";

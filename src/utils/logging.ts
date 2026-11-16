@@ -1,4 +1,4 @@
-/* utils/logging.ts — the library's logger: levels and a replaceable sink, quiet unless something needs attention. */
+/* The library's logger: levels and a replaceable sink, quiet unless something needs attention. */
 
 export type LogLevel = "debug" | "info" | "warn" | "error" | "silent";
 

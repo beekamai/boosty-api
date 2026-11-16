@@ -1,4 +1,3 @@
-/* src/types/content.ts */
 import { BaseObject } from "./base";
 
 /**

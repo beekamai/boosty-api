@@ -1,4 +1,4 @@
-/* types/target.ts — blog goals ("targets"): money and subscribers. */
+/* Blog goals ("targets"): money and subscribers. */
 import { BaseObject } from "./base";
 import { Currency } from "./subscription";
 

@@ -1,4 +1,4 @@
-/* resources/targets.ts — blog goals ("targets"): list, read, create, edit, remove. */
+/* Blog goals ("targets"): list, read, create, edit, remove. */
 import { BaseResource, apiPath } from "../http";
 import { Target, TargetsResponse, type TargetType } from "../types/target";
 

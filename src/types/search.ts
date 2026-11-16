@@ -1,4 +1,4 @@
-/* types/search.ts — post and tag search results. */
+/* Post and tag search results. */
 import { BaseObject } from "./base";
 import { BlogProfile } from "./blog";
 import { Post } from "./post";

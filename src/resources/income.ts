@@ -1,4 +1,4 @@
-/* resources/income.ts — the blog owner's billing: sales, donations, holds, payouts. */
+/* The blog owner's billing: sales, donations, holds, payouts. */
 import { BaseResource, apiPath, commaList } from "../http";
 import {
     BroadcastMessageStatsResponse,

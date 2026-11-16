@@ -1,4 +1,4 @@
-/* resources/messaging.ts — dialogs, messages, notifications. */
+/* Dialogs, messages, notifications. */
 import { BaseResource, apiPath } from "../http";
 import { Dialog, DialogsResponse, DialogWithUser, MessagesResponse } from "../types/messaging";
 import { NotificationsResponse } from "../types/notification";

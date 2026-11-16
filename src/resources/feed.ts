@@ -1,4 +1,4 @@
-/* resources/feed.ts — general feed and search. */
+/* General feed and search. */
 import { BaseResource } from "../http";
 import { PostsResponse } from "../types/post";
 import { SearchBlogsResponse } from "../types/blog";

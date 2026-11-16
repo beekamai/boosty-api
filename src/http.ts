@@ -1,4 +1,4 @@
-/* http.ts — transport layer and the API core contract. */
+/* Transport layer and the API core contract. */
 /* Kept separate so resource modules (resources/*.ts) depend on the ApiCore interface */
 /* rather than the concrete API class — this breaks the circular dependency. */
 import type { Auth } from "./auth/auth";

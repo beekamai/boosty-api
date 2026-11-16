@@ -1,4 +1,4 @@
-/* resources/media.ts — blog media feed (photo/video/audio). */
+/* Blog media feed (photo/video/audio). */
 import { BaseResource, apiPath } from "../http";
 import { MediaPostsResponse } from "../types/media";
 

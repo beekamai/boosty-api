@@ -1,4 +1,4 @@
-/* utils/message.ts — assembles content blocks for SENDING a message to a chat/comment.
+/* Assembles content blocks for SENDING a message to a chat/comment.
    Boosty format: an array of blocks; the content field is a JSON string ["text","unstyled",[]]. */
 
 export type ContentBlock = Record<string, unknown>;
